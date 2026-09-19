@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sentinel decision ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Spline+Sans+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#e9edf2; --card:#f6f8fa; --ink:#16202b; --ink-soft:#54636f;
+    --rule:#c0cad5; --rule-soft:#dbe2e9; --indigo:#2e3a8c;
+    --allow:#2f6b4f; --escalate:#8f6410; --rewrite:#2b5a86; --block:#a02b2b;
+    --mandate:#2f6b4f; --directive:#a02b2b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--paper); color:var(--ink);
+    font:15px/1.55 "Spline Sans Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    padding:0 0 5rem;
+  }
+  .wrap{max-width:1180px;margin:0 auto;padding:0 1.5rem}
+
+  header{border-bottom:2px solid var(--ink);padding:2.5rem 0 1.25rem;margin-bottom:1.75rem}
+  h1{
+    font-family:Fraunces, Georgia, serif; font-weight:600;
+    font-size:clamp(1.9rem,4.5vw,3rem); line-height:1.05; margin:0 0 .4rem;
+    letter-spacing:-.015em;
+  }
+  .sub{color:var(--ink-soft);max-width:62ch;margin:0}
+
+  .controls{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;margin:1.25rem 0 0}
+  select,button,label.file{
+    font:inherit;font-size:13px;background:var(--card);color:var(--ink);
+    border:1px solid var(--rule);border-radius:2px;padding:.45rem .7rem;cursor:pointer;
+  }
+  button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+  input[type=file]{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+  :focus-visible{outline:2px solid var(--indigo);outline-offset:2px}
+
+  .tally{display:flex;gap:2rem;flex-wrap:wrap;margin:1.5rem 0 2rem;
+    border-top:1px solid var(--rule-soft);border-bottom:1px solid var(--rule-soft);padding:.9rem 0}
+  .tally div{display:flex;align-items:baseline;gap:.45rem}
+  .tally b{font-family:Fraunces,serif;font-size:1.5rem;font-weight:600}
+  .tally span{color:var(--ink-soft);font-size:13px}
+
+  /* one row per decision, hung off a vertical spine */
+  .step{
+    display:grid;grid-template-columns:3.2rem 1fr;gap:1rem;
+    border-left:2px solid var(--rule);padding:0 0 1.5rem 1.25rem;margin-left:.5rem;position:relative;
+  }
+  .step::before{
+    content:"";position:absolute;left:-6px;top:.55rem;width:10px;height:10px;
+    border-radius:50%;background:var(--paper);border:2px solid var(--rule);
+  }
+  .step[data-d="block"]::before{background:var(--block);border-color:var(--block)}
+  .step[data-d="escalate"]::before{background:var(--escalate);border-color:var(--escalate)}
+  .step[data-d="rewrite"]::before{background:var(--rewrite);border-color:var(--rewrite)}
+  .step[data-d="allow"]::before{background:var(--allow);border-color:var(--allow)}
+  .stepno{color:var(--ink-soft);font-size:13px;padding-top:.15rem}
+
+  .head{display:flex;flex-wrap:wrap;gap:.6rem;align-items:baseline}
+  .act{font-weight:700}
+  .args{color:var(--ink-soft);font-size:13px;word-break:break-word}
+  .chip{
+    font-size:12px;font-weight:700;letter-spacing:.04em;padding:.12rem .5rem;
+    border-radius:2px;color:#fff;
+  }
+  .chip[data-d="allow"]{background:var(--allow)}
+  .chip[data-d="block"]{background:var(--block)}
+  .chip[data-d="escalate"]{background:var(--escalate)}
+  .chip[data-d="rewrite"]{background:var(--rewrite)}
+
+  /* the hero: who is asking for this action */
+  .balance{margin:.7rem 0 .5rem;max-width:520px}
+  .bar{display:flex;height:22px;border:1px solid var(--rule);background:var(--card)}
+  .bar i{display:block;height:100%}
+  .bar .m{background:var(--mandate)}
+  .bar .d{background:var(--directive);margin-left:auto}
+  .blabel{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-top:.25rem}
+
+  .risk{display:flex;align-items:center;gap:.6rem;font-size:13px;margin:.4rem 0}
+  .meter{width:190px;height:8px;background:var(--rule-soft);position:relative}
+  .meter i{display:block;height:100%;background:var(--ink)}
+  .meter::after{content:"";position:absolute;left:72%;top:-3px;height:14px;border-left:1px dashed var(--block)}
+
+  .why{margin:.55rem 0 0;color:var(--ink)}
+  .jury{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0 0}
+  .jv{font-size:12px;border:1px solid var(--rule);padding:.1rem .45rem;background:var(--card)}
+  .jv b{font-weight:700}
+  .jv[data-v="block"]{border-color:var(--block);color:var(--block)}
+  .jv[data-v="escalate"]{border-color:var(--escalate);color:var(--escalate)}
+  .jv[data-v="allow"]{border-color:var(--allow);color:var(--allow)}
+  .dial{display:flex;align-items:center;gap:.5rem;font-size:12px;color:var(--soft);margin:.45rem 0 0}
+  .dial .track{width:120px;height:6px;background:var(--rule-soft)}
+  .dial .track i{display:block;height:100%;background:var(--escalate)}
+  .pp{font-size:12px;margin:.45rem 0 0}
+  .pp div{color:var(--soft)}
+  .pp em{font-style:normal;color:var(--block);font-weight:700}
+  .codes{display:flex;flex-wrap:wrap;gap:.35rem;margin:.5rem 0 0}
+  .code{font-size:12px;border:1px solid var(--rule);padding:.1rem .4rem;background:var(--card)}
+  .code b{font-weight:700}
+
+  details{margin-top:.6rem;border-top:1px solid var(--rule-soft);padding-top:.5rem}
+  summary{cursor:pointer;font-size:13px;color:var(--indigo)}
+  pre{
+    background:var(--card);border:1px solid var(--rule-soft);padding:.7rem;
+    overflow-x:auto;font-size:12.5px;margin:.6rem 0 0;white-space:pre-wrap;word-break:break-word;
+  }
+  mark{background:#f6d9d9;color:var(--block);padding:0 .1em}
+  .empty{border:1px dashed var(--rule);padding:2.5rem;text-align:center;color:var(--ink-soft)}
+  @media (prefers-reduced-motion:no-preference){.step{transition:opacity .12s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Decision ledger</h1>
+  <p class="sub">Every action the agent proposed, what the defense decided, and the evidence it decided from. The balance bar shows whether the user's goal or an untrusted instruction accounts for each action.</p>
+  <div class="controls">
+    <select id="run" aria-label="Run"></select>
+    <button id="only" aria-pressed="false">Interventions only</button>
+    <label class="file">Load decisions.jsonl<input type="file" id="file" accept=".jsonl,.json"></label>
+  </div>
+</header>
+
+<div class="tally" id="tally"></div>
+<div id="list"></div>
+</div>
+
+<script>
+const S = { rows: [], run: null, only: false };
+
+const WEIGHTS = {
+  TOOL_NOT_REQUIRED_FOR_GOAL:.95, SENSITIVE_TO_UNTRUSTED_SINK:.93,
+  UNTRUSTED_INSTRUCTION_SOURCE:.90, PARAMETER_ONLY_IN_UNTRUSTED:.72,
+  RECALLED_UNTRUSTED_AUTHORITY:.65, MISSING_CONFIRMATION:.58,
+  FRAGMENTED_INSTRUCTION:.55, OBFUSCATED_INSTRUCTION:.50,
+  MEMORY_INHERITS_TRUST:.22, CONTAINED_AT_SINK:0
+};
+
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function describe(a){
+  if(!a) return '—';
+  if(a.type === 'tool_call') return a.tool;
+  return a.type;
+}
+function argsOf(a){
+  if(!a) return '';
+  if(a.type === 'tool_call'){
+    const e = Object.entries(a.arguments || {});
+    if(!e.length) return '';
+    return e.map(([k,v]) => `${k}=${String(v).slice(0,90)}`).join('  ');
+  }
+  return String(a.content || '').slice(0,160);
+}
+
+function render(){
+  const runs = [...new Set(S.rows.map(r => r.run_id))];
+  const sel = document.getElementById('run');
+  if(sel.options.length !== runs.length){
+    sel.innerHTML = runs.map(r => `<option>${esc(r)}</option>`).join('');
+    S.run = S.run && runs.includes(S.run) ? S.run : runs[0];
+    sel.value = S.run;
+  }
+  let rows = S.rows.filter(r => r.run_id === S.run);
+  const counts = rows.reduce((a,r)=>(a[r.decision]=(a[r.decision]||0)+1,a),{});
+  document.getElementById('tally').innerHTML =
+    ['allow','rewrite','escalate','block'].map(k =>
+      `<div><b style="color:var(--${k})">${counts[k]||0}</b><span>${k}</span></div>`).join('') +
+    `<div><b>${rows.length}</b><span>decisions</span></div>`;
+
+  if(S.only) rows = rows.filter(r => r.decision !== 'allow');
+
+  const list = document.getElementById('list');
+  if(!rows.length){
+    list.innerHTML = `<div class="empty">No decisions for this run. Load a decisions.jsonl file to begin.</div>`;
+    return;
+  }
+
+  list.innerHTML = rows.map(r => {
+    const m = Math.round((r.mandate_support ?? 0) * 100);
+    const d = Math.round((r.directive_support ?? 0) * 100);
+    const sig = Object.entries(r.signals || {}).sort((a,b) => b[1]-a[1]);
+    const ev = r.evidence || {};
+    const span = (ev.directive && ev.directive.span) || (ev.assembled_from && ev.assembled_from.span)
+              || (ev.recalled_directive && ev.recalled_directive.span) || '';
+    return `
+    <div class="step" data-d="${esc(r.decision)}">
+      <div class="stepno">step ${esc(r.step_id)}</div>
+      <div>
+        <div class="head">
+          <span class="chip" data-d="${esc(r.decision)}">${esc(r.decision)}</span>
+          <span class="act">${esc(describe(r.action))}</span>
+          <span class="args">${esc(argsOf(r.action))}</span>
+        </div>
+
+        <div class="balance">
+          <div class="bar" role="img" aria-label="Goal accounts for ${m} percent, untrusted instruction for ${d} percent">
+            <i class="m" style="width:${m}%"></i><i class="d" style="width:${d}%"></i>
+          </div>
+          <div class="blabel"><span>goal accounts for ${m}%</span><span>untrusted instruction ${d}%</span></div>
+        </div>
+
+        <div class="risk">
+          <div class="meter" title="dashed line is the block threshold"><i style="width:${Math.round((r.risk||0)*100)}%"></i></div>
+          <span>risk ${(r.risk ?? 0).toFixed(3)}</span>
+        </div>
+
+        <p class="why">${esc(r.explanation || '')}</p>
+
+        <div class="jury">${(r.committee||[]).map(j =>
+          `<span class="jv" data-v="${esc(j.verdict)}"><b>${esc(j.judge)}</b> ${esc(j.verdict)}</span>`).join('')}
+          ${r.committee_split ? '<span class="jv" data-v="escalate">judges split</span>' : ''}</div>
+
+        ${typeof r.suspicion === 'number' ? `<div class="dial">
+          <span>suspicion</span><div class="track"><i style="width:${Math.round(r.suspicion*100)}%"></i></div>
+          <span>${r.suspicion.toFixed(2)}</span></div>` : ''}
+
+        ${(r.passports||[]).length ? `<div class="pp">${r.passports.map(p =>
+          `<div>${esc(p.argument)} &larr; first seen in ${esc(p.first_seen)} ${
+            ['untrusted_internal','untrusted_external','adversary_controlled'].includes(p.trust)
+            ? `<em>(${esc(p.trust)})</em>` : `(${esc(p.trust)})`}</div>`).join('')}</div>` : ''}
+
+        <div class="codes">${sig.map(([c,v]) =>
+          `<span class="code"><b>${esc(c)}</b> ${v.toFixed(2)}&times;${(WEIGHTS[c] ?? .4).toFixed(2)}</span>`).join('')
+          || '<span class="code">USER_GOAL_ALIGNED</span>'}</div>
+
+        ${span ? `<details><summary>Evidence span the decision rests on</summary>
+          <pre>${esc(span)}</pre></details>` : ''}
+
+        ${Object.keys(ev).length ? `<details><summary>Full evidence record</summary>
+          <pre>${esc(JSON.stringify(ev, null, 2))}</pre></details>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function load(text){
+  S.rows = text.split('\n').filter(l => l.trim()).map(l => {
+    try { return JSON.parse(l); } catch { return null; }
+  }).filter(Boolean);
+  document.getElementById('run').innerHTML = '';
+  S.run = null;
+  render();
+}
+
+document.getElementById('run').addEventListener('change', e => { S.run = e.target.value; render(); });
+document.getElementById('only').addEventListener('click', e => {
+  S.only = !S.only;
+  e.target.setAttribute('aria-pressed', String(S.only));
+  render();
+});
+document.getElementById('file').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(f) f.text().then(load);
+});
+
+fetch('decisions.jsonl').then(r => r.ok ? r.text() : Promise.reject()).then(load).catch(() => render());
+</script>
+</body>
+</html>
