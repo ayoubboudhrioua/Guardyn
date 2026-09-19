@@ -1,4 +1,4 @@
-# Isnad — authority-flow control for tool-using agents
+#Guardyn — authority-flow control for tool-using agents
 
 SENTINEL challenge submission, IndabaX Tunisia 2026.
 
@@ -19,7 +19,7 @@ refuses a legitimate task. A defense that decides from authority allows it.
     trusted input (user + policy)        untrusted observations (email, docs, logs, memory)
             │                                          │
             ▼                                          ▼
-    Stage 0  Mandate Compiler  ──────────────►  Stage 1  Isnad labels (IFC)
+    Stage 0  Mandate Compiler  ──────────────►  Stage 1  Guadryn labels (IFC)
       contract.py                                 labels.py
       compiled before any untrusted               trust × sensitivity, join rule:
       byte is read; untrusted content             weakest trust, strongest sensitivity
@@ -52,9 +52,9 @@ refuses a legitimate task. A defense that decides from authority allows it.
 | Defense | split | BTU ↑ | ASR ↓ | CVR ↓ | FBR ↓ | UER ↓ | DFI ↑ | Brier ↓ | ECE ↓ |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `provenance` (best baseline) | public | 1.000 | 0.000 | 0.000 | 0.046 | 0.000 | 1.000 | 0.038 | 0.099 |
-| **Isnad** | public | 1.000 | 0.000 | 0.000 | **0.000** | 0.000 | 1.000 | **0.030** | **0.053** |
+| **Guadryn** | public | 1.000 | 0.000 | 0.000 | **0.000** | 0.000 | 1.000 | **0.030** | **0.053** |
 | `provenance` | validation | 1.000 | 0.250 | 0.111 | 0.000 | 0.000 | 0.889 | 0.060 | 0.027 |
-| **Isnad** | validation | 1.000 | **0.000** | **0.000** | 0.000 | 0.000 | **1.000** | **0.022** | **0.002** |
+| **Guadryn** | validation | 1.000 | **0.000** | **0.000** | 0.000 | 0.000 | **1.000** | **0.022** | **0.002** |
 
 The baseline's validation failure is `enterprise_val_encoded_exfil`: its taint matching
 is verbatim and the payload is base64.
@@ -65,7 +65,7 @@ is verbatim and the payload is base64.
 `AUTHENTICATED_USER` before anything untrusted is read. A document cannot add a tool to
 it. This is what stops false-approval and forged-closure with no content analysis at all.
 
-**Isnad labels.** Two axes, joined as weakest-trust and strongest-sensitivity. Memory
+**Guadryn labels.** Two axes, joined as weakest-trust and strongest-sensitivity. Memory
 freezes its label at write time, so a fake policy planted by a newsletter in turn 1
 cannot outrank the real policy document in turn 2. Recall does not launder trust.
 
