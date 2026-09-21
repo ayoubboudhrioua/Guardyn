@@ -1,0 +1,11 @@
+# Finance handles customer money data: keep confidential material out of memory as well,
+# and allow fewer repeated payment-adjacent calls.
+name: finance
+match: {policy_id_prefix: finance}
+sinks:
+  user_reply: internal
+  internal_record: internal
+  memory: public
+  external: public
+budgets:
+  max_calls_per_tool: 5

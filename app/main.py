@@ -13,23 +13,32 @@ import time
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from app.decide import evaluate
+from app.decide import evaluate as legacy_evaluate
+from app.flow.engine import evaluate as flow_evaluate
 from app.models import DefenseDecision, DefenseRequest
 from app.trace import read_all, record
 
+MODE = os.environ.get("ISNAD_MODE", "flow").lower()
+evaluate = flow_evaluate if MODE == "flow" else legacy_evaluate
 ABLATE = {s.strip() for s in os.environ.get("SENTINEL_ABLATE", "").split(",") if s.strip()}
+
+# Debug aid: append every raw request to this file so tests can replay real traffic.
+CAPTURE = os.environ.get("ISNAD_CAPTURE", "")
 
 app = FastAPI(title="SENTINEL defense", docs_url=None, redoc_url=None, openapi_url=None)
 
 
 @app.get("/healthz")
 def healthz() -> dict[str, str]:
-    return {"status": "ok", "ablated": ",".join(sorted(ABLATE))}
+    return {"status": "ok", "mode": MODE, "ablated": ",".join(sorted(ABLATE))}
 
 
 @app.post("/v1/decision", response_model=DefenseDecision)
 def decision(request: DefenseRequest) -> DefenseDecision:
     started = time.perf_counter()
+    if CAPTURE:
+        with open(CAPTURE, "a", encoding="utf-8") as fh:
+            fh.write(request.model_dump_json() + "\n")
     decided, trace = evaluate(request)
     if ABLATE:
         decided, trace = _reapply_without(request, decided, trace)

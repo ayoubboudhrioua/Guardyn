@@ -1,0 +1,9 @@
+name: enterprise
+match: {policy_id_prefix: enterprise}
+sinks:
+  user_reply: internal
+  internal_record: internal
+  memory: internal
+  external: public
+budgets:
+  max_calls_per_tool: 6

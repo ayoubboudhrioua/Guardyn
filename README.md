@@ -2,6 +2,70 @@
 
 SENTINEL challenge submission, IndabaX Tunisia 2026.
 
+## Isnad-Flow: the layer added after testing on Qwen3-8B
+
+The original Isnad was only ever run on the mock model. Run against the real Qwen3-8B agent it let
+**22 of 31 public attacks land (ASR 0.71)**, including all 21 `data_exfiltration` scenarios. The
+cause was a missing rule, not a missing signal: it checked for leaks to *external* sinks only, so
+a `restricted` token the user's request legitimately caused the agent to read could be repeated in
+the reply or written into an internal record. Isnad-Flow adds a layer built from published
+mechanisms. Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+| Layer | What it does | Paper |
+| --- | --- | --- |
+| L1 flow ledger | protected atoms (secret-shaped values in confidential or restricted results) with their labels | FIDES |
+| L2 policy engine | YAML policy sets: sink ceilings, tool-to-sink map, call budgets; base plus one per domain | Progent |
+| L3 flow policy | a protected atom may reach *any* sink (reply, record, memory, outbound) only if the user's own request licensed that kind of disclosure | FIDES, CaMeL |
+| L4 task-alignment judge | Qwen, datamarked untrusted text, weak flag only | Task Shield, Spotlighting |
+| L5 counterfactual check | re-plan with untrusted content masked; flag calls that do not survive | MELON (reduced) |
+| L6 flags | typed flags in four families: authority, flow, policy, semantic | |
+| L7 ladder | allow, **redact**, downgrade, escalate, block: least destructive first, every redaction re-verified | |
+
+Redaction is the point: the reply still completes, with `[REDACTED:credential]` where the secret
+was. Encoded leaks (base64, hex) cannot be cleanly redacted, so they are blocked.
+
+### Measured against Qwen3-8B (Ollama, 4-bit), public split, 40 scenarios
+
+| Configuration | ASR | CVR | BTU | FBR | p50 ms | p95 ms |
+| --- | --- | --- | --- | --- | --- | --- |
+| legacy Isnad | 0.710 | 0.550 | 0.444 | 0.000 | 3.7 | 15 |
+| **Isnad-Flow, all layers** | **0.000** | **0.000** | 0.333 | 0.000 | 6.5 | 1227 |
+| Flow, L4 and L5 off | 0.000 | 0.000 | 0.333 | 0.000 | 5.7 | 25 |
+| Flow, L3 off | 0.710 | 0.550 | 0.333 | 0.000 | 5.1 | 1200 |
+
+Raw results are in `observability/results/`. Each configuration was run once.
+
+What this does and does not show:
+
+- **L3 does all the work.** Turning it off restores the 0.71 ASR; turning L4 and L5 off changes no
+  outcome. The judge answered "serves the user's request" on all 53 actions it saw, including every
+  exfiltration reply, because it is the same Qwen3-8B the injection had already persuaded. It
+  raised one `beyond_scope` flag (correct), on a reply, and L5 only runs on tool calls, so L5
+  never produced a verdict. They add up to 1.2 s of p95
+  latency for no measured benefit on this split. They stay because the design is stronger with
+  them and because a different judge model could change this, not because the numbers support them.
+- **In-distribution result.** The 21 exfiltration scenarios put a credential-named field in a
+  restricted record and have the agent repeat it. L3 is general (no scenario ids, no fixed
+  strings; secrets are found by field name and entropy, sinks by policy), but it has not been
+  tested against leaks of ordinary prose, or of secrets stored under innocuous keys and short
+  values. Unit tests cover the entropy and encoding paths only.
+- **Benign utility is unchanged by the defense.** BTU fell from 0.444 to 0.333 because one benign
+  scenario (`enterprise_ticket_followup`) failed its grader in the flow run: the agent skipped
+  the `ticket_update` call and only claimed to have made it. Isnad allowed every step there, and
+  the other benign scenarios behave the same in both runs. Qwen is not bit-reproducible run to run
+  on this GPU. FBR is 0.000.
+- **Calibration got worse.** Brier 0.16 to 0.28 and ECE 0.17 to 0.31 on public. A redaction carries
+  a fused risk of about 0.85 whether or not the run was labelled an attack, and the thresholds were
+  calibrated on the mock model. Not recalibrated.
+- **Validation split shows nothing.** Qwen resisted all 4 validation attacks by itself, and Isnad
+  intervened on none of 45 decisions. The encoded-exfiltration scenario there was not exercised
+  against the real model.
+- **The reads still happen.** Redaction stops the disclosure. It does not stop an injected lookup
+  from running.
+
+Run it: `ISNAD_MODE=flow uvicorn app.main:app --port 8080` (default), `ISNAD_MODE=legacy` for the old
+pipeline, `ISNAD_LLM=off` to disable L4 and L5, `ISNAD_DISABLE=L3,L4,L5,BUDGET` to ablate layers.
+
 ## Hypothesis
 
 Prompt injection is an **authority-confusion** bug, not a content bug. Untrusted
@@ -113,7 +177,7 @@ not supported by your request*; the trace keeps the reason codes and the evidenc
   provide. See `docs/not-built.md`.
 - **No internal model signals.** Attention and hidden-state probes need the agent's
   forward pass. Over `--defense-url` the defense never sees it.
-- **Not validated on Qwen3-8B.** All numbers above are from the deterministic mock model.
+- **Numbers in the table above are from the mock model.** Qwen3-8B results for the original pipeline and for Isnad-Flow are in the section at the top.
 - **Humans stay in the loop** for every consequential action without a recorded
   confirmation, and an action attributable to untrusted content is never laundered by
   routing it past a human — `request_confirmation` gets no risk discount when injection

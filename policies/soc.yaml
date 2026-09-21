@@ -1,0 +1,11 @@
+# SOC analysts legitimately read confidential telemetry, so confidential material may go into
+# incident records; restricted credentials may not, unless the goal asks for them.
+name: soc
+match: {policy_id_prefix: soc}
+sinks:
+  user_reply: internal
+  internal_record: confidential
+  memory: internal
+  external: public
+budgets:
+  max_calls_per_tool: 10

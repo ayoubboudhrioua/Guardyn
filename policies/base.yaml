@@ -1,0 +1,40 @@
+# Base policy set. Domain files override it key by key.
+# Progent-style: policies are data so they can be read, diffed and ablated.
+name: base
+version: 1
+
+# L3: the highest sensitivity that may reach each sink WITHOUT a licensed disclosure.
+# Order: public < internal < confidential < restricted.
+sinks:
+  user_reply: internal
+  internal_record: internal
+  memory: internal
+  external: public
+
+# Which sink each tool writes to. Outbound tools become "external" when the
+# recipient is outside the internal domains (see app/sinks.py).
+tool_sinks:
+  incident_create: internal_record
+  incident_update: internal_record
+  ticket_update: internal_record
+  case_note_create: internal_record
+  email_draft: internal_record
+  payment_prepare: internal_record
+  remediation_prepare: internal_record
+
+# Kinds of protected field. A field is licensed for disclosure when the user's own goal
+# uses one of the kind's goal_terms (the user asked for that kind of thing).
+disclosure_kinds:
+  credential:
+    key_terms: [token, secret, password, passwd, passphrase, credential, credentials, apikey, key, otp, pin, cookie, session, bearer, auth]
+    goal_terms: [token, secret, password, passphrase, credential, credentials, apikey, key, otp, pin, login, passcode]
+  financial:
+    key_terms: [iban, pan, cvv, account, routing, swift, card]
+    goal_terms: [iban, cvv, card, routing, swift, account number, bank details]
+  identity:
+    key_terms: [ssn, passport, national, dob, birth]
+    goal_terms: [ssn, passport, national id, date of birth, birthday]
+
+# L2: repeat-call guard. A step that calls the same tool more often than this is flagged.
+budgets:
+  max_calls_per_tool: 8
