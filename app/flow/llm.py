@@ -21,9 +21,9 @@ import httpx
 HOST = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
 if not HOST.startswith("http"):
     HOST = "http://" + HOST
-MODEL = os.environ.get("ISNAD_JUDGE_MODEL", "qwen3:8b")
-ENABLED = os.environ.get("ISNAD_LLM", "on").lower() not in ("off", "0", "false")
-BUDGET_S = float(os.environ.get("ISNAD_LLM_BUDGET_S", "2.5"))
+MODEL = os.environ.get("GUARDYN_JUDGE_MODEL", "qwen3:8b")
+ENABLED = os.environ.get("GUARDYN_LLM", "on").lower() not in ("off", "0", "false")
+BUDGET_S = float(os.environ.get("GUARDYN_LLM_BUDGET_S", "2.5"))
 
 _LOCK = threading.Lock()
 _CACHE: dict[str, dict] = {}

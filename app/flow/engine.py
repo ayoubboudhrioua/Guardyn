@@ -1,6 +1,6 @@
-"""Isnad-Flow decision pipeline (L0 to L7). See docs/ARCHITECTURE.md.
+"""Guardyn-Flow decision pipeline (L0 to L7). See docs/ARCHITECTURE.md.
 
-The original Isnad committee runs first and supplies the deterministic core: the plan contract
+The original Guardyn committee runs first and supplies the deterministic core: the plan contract
 (L0), custody and passports, and the policy and lifecycle judges (L2). Flow adds the ledger and
 flow policy (L1, L3), the two gated model layers (L4, L5), the flag registry (L6) and the ladder
 (L7) on top of it.
@@ -22,9 +22,9 @@ from app.flow.ladder import choose
 from app.fusion import confidence, fuse
 from app.models import DefenseDecision, DefenseRequest
 
-# Ablation switch: ISNAD_DISABLE=L3,L4,L5,BUDGET turns those layers off so each one's
+# Ablation switch: GUARDYN_DISABLE=L3,L4,L5,BUDGET turns those layers off so each one's
 # contribution can be measured on its own.
-DISABLED = {p.strip().upper() for p in os.environ.get("ISNAD_DISABLE", "").split(",") if p.strip()}
+DISABLED = {p.strip().upper() for p in os.environ.get("GUARDYN_DISABLE", "").split(",") if p.strip()}
 
 FLOW_CATEGORY = {
     "SENSITIVE_IN_REPLY": "Some details were left out because you did not ask for them.",

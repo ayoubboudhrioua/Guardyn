@@ -18,12 +18,12 @@ from app.flow.engine import evaluate as flow_evaluate
 from app.models import DefenseDecision, DefenseRequest
 from app.trace import read_all, record
 
-MODE = os.environ.get("ISNAD_MODE", "flow").lower()
+MODE = os.environ.get("GUARDYN_MODE", "flow").lower()
 evaluate = flow_evaluate if MODE == "flow" else legacy_evaluate
 ABLATE = {s.strip() for s in os.environ.get("SENTINEL_ABLATE", "").split(",") if s.strip()}
 
 # Debug aid: append every raw request to this file so tests can replay real traffic.
-CAPTURE = os.environ.get("ISNAD_CAPTURE", "")
+CAPTURE = os.environ.get("GUARDYN_CAPTURE", "")
 
 app = FastAPI(title="SENTINEL defense", docs_url=None, redoc_url=None, openapi_url=None)
 

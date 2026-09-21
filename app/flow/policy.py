@@ -18,7 +18,7 @@ import yaml
 from app.labels import sensitivity_rank
 from app.models import CandidateAction, DefenseRequest
 
-POLICY_DIR = Path(os.environ.get("ISNAD_POLICY_DIR", Path(__file__).resolve().parents[2] / "policies"))
+POLICY_DIR = Path(os.environ.get("GUARDYN_POLICY_DIR", Path(__file__).resolve().parents[2] / "policies"))
 
 SINK_ORDER = ["user_reply", "internal_record", "memory", "external"]
 

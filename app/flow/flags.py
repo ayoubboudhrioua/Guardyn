@@ -74,7 +74,7 @@ class Flag:
 
 
 def from_legacy(signals: dict[str, float]) -> list[Flag]:
-    """The original Isnad committee's signals, re-labelled with a family."""
+    """The original Guardyn committee's signals, re-labelled with a family."""
     layer_of = {"policy": {"TOOL_NOT_IN_CONTRACT", "LIFECYCLE_SKIPPED", "MISSING_CONFIRMATION"}}
     out = []
     for code, strength in signals.items():

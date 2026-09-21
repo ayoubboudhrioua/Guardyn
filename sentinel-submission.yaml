@@ -1,10 +1,10 @@
-name: isnad-flow
+name: guardyn-flow
 kind: defense
 api_version: v1
 team: your-team-name
 port: 8080
 # The judge (L4) and counterfactual (L5) layers call a local Qwen3-8B through Ollama.
-# Both are optional: with ISNAD_LLM=off the deterministic layers still decide alone.
+# Both are optional: with GUARDYN_LLM=off the deterministic layers still decide alone.
 models:
   - name: qwen3:8b
     source: https://ollama.com/library/qwen3 (weights: https://huggingface.co/Qwen/Qwen3-8B)
@@ -15,6 +15,6 @@ resources:
   cpus: 1.0
   gpus: 1
 description: >-
-  Isnad-Flow. Information-flow control (need-to-know disclosure per sink), declarative per-domain
+  Guardyn-Flow. Information-flow control (need-to-know disclosure per sink), declarative per-domain
   policies, a datamarked task-alignment judge and a masked re-planning check, fused into typed
   flags and an enforcement ladder that redacts before it blocks.

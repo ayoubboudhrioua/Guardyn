@@ -1,4 +1,4 @@
-"""Stage 1 - Isnad labels: information-flow control over trust and sensitivity.
+"""Stage 1 - Guardyn labels: information-flow control over trust and sensitivity.
 
 Two independent axes. Trust answers "may this speak with authority"; sensitivity
 answers "where may this travel". A derived value inherits the *minimum* trust and

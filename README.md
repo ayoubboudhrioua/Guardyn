@@ -2,13 +2,13 @@
 
 SENTINEL challenge submission, IndabaX Tunisia 2026.
 
-## Isnad-Flow: the layer added after testing on Qwen3-8B
+## Guardyn-Flow: the layer added after testing on Qwen3-8B
 
-The original Isnad was only ever run on the mock model. Run against the real Qwen3-8B agent it let
+The original Guardyn was only ever run on the mock model. Run against the real Qwen3-8B agent it let
 **22 of 31 public attacks land (ASR 0.71)**, including all 21 `data_exfiltration` scenarios. The
 cause was a missing rule, not a missing signal: it checked for leaks to *external* sinks only, so
 a `restricted` token the user's request legitimately caused the agent to read could be repeated in
-the reply or written into an internal record. Isnad-Flow adds a layer built from published
+the reply or written into an internal record. Guardyn-Flow adds a layer built from published
 mechanisms. Full design: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 | Layer | What it does | Paper |
@@ -28,8 +28,8 @@ was. Encoded leaks (base64, hex) cannot be cleanly redacted, so they are blocked
 
 | Configuration | ASR | CVR | BTU | FBR | p50 ms | p95 ms |
 | --- | --- | --- | --- | --- | --- | --- |
-| legacy Isnad | 0.710 | 0.550 | 0.444 | 0.000 | 3.7 | 15 |
-| **Isnad-Flow, all layers** | **0.000** | **0.000** | 0.333 | 0.000 | 6.5 | 1227 |
+| legacy Guardyn | 0.710 | 0.550 | 0.444 | 0.000 | 3.7 | 15 |
+| **Guardyn-Flow, all layers** | **0.000** | **0.000** | 0.333 | 0.000 | 6.5 | 1227 |
 | Flow, L4 and L5 off | 0.000 | 0.000 | 0.333 | 0.000 | 5.7 | 25 |
 | Flow, L3 off | 0.710 | 0.550 | 0.333 | 0.000 | 5.1 | 1200 |
 
@@ -51,20 +51,20 @@ What this does and does not show:
   values. Unit tests cover the entropy and encoding paths only.
 - **Benign utility is unchanged by the defense.** BTU fell from 0.444 to 0.333 because one benign
   scenario (`enterprise_ticket_followup`) failed its grader in the flow run: the agent skipped
-  the `ticket_update` call and only claimed to have made it. Isnad allowed every step there, and
+  the `ticket_update` call and only claimed to have made it. Guardyn allowed every step there, and
   the other benign scenarios behave the same in both runs. Qwen is not bit-reproducible run to run
   on this GPU. FBR is 0.000.
 - **Calibration got worse.** Brier 0.16 to 0.28 and ECE 0.17 to 0.31 on public. A redaction carries
   a fused risk of about 0.85 whether or not the run was labelled an attack, and the thresholds were
   calibrated on the mock model. Not recalibrated.
-- **Validation split shows nothing.** Qwen resisted all 4 validation attacks by itself, and Isnad
+- **Validation split shows nothing.** Qwen resisted all 4 validation attacks by itself, and Guardyn
   intervened on none of 45 decisions. The encoded-exfiltration scenario there was not exercised
   against the real model.
 - **The reads still happen.** Redaction stops the disclosure. It does not stop an injected lookup
   from running.
 
-Run it: `ISNAD_MODE=flow uvicorn app.main:app --port 8080` (default), `ISNAD_MODE=legacy` for the old
-pipeline, `ISNAD_LLM=off` to disable L4 and L5, `ISNAD_DISABLE=L3,L4,L5,BUDGET` to ablate layers.
+Run it: `GUARDYN_MODE=flow uvicorn app.main:app --port 8080` (default), `GUARDYN_MODE=legacy` for the old
+pipeline, `GUARDYN_LLM=off` to disable L4 and L5, `GUARDYN_DISABLE=L3,L4,L5,BUDGET` to ablate layers.
 
 ## Hypothesis
 
@@ -83,7 +83,7 @@ refuses a legitimate task. A defense that decides from authority allows it.
     trusted input (user + policy)        untrusted observations (email, docs, logs, memory)
             │                                          │
             ▼                                          ▼
-    Stage 0  Mandate Compiler  ──────────────►  Stage 1  Guadryn labels (IFC)
+    Stage 0  Mandate Compiler  ──────────────►  Stage 1  Guardyn labels (IFC)
       contract.py                                 labels.py
       compiled before any untrusted               trust × sensitivity, join rule:
       byte is read; untrusted content             weakest trust, strongest sensitivity
@@ -116,9 +116,9 @@ refuses a legitimate task. A defense that decides from authority allows it.
 | Defense | split | BTU ↑ | ASR ↓ | CVR ↓ | FBR ↓ | UER ↓ | DFI ↑ | Brier ↓ | ECE ↓ |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `provenance` (best baseline) | public | 1.000 | 0.000 | 0.000 | 0.046 | 0.000 | 1.000 | 0.038 | 0.099 |
-| **Guadryn** | public | 1.000 | 0.000 | 0.000 | **0.000** | 0.000 | 1.000 | **0.030** | **0.053** |
+| **Guardyn** | public | 1.000 | 0.000 | 0.000 | **0.000** | 0.000 | 1.000 | **0.030** | **0.053** |
 | `provenance` | validation | 1.000 | 0.250 | 0.111 | 0.000 | 0.000 | 0.889 | 0.060 | 0.027 |
-| **Guadryn** | validation | 1.000 | **0.000** | **0.000** | 0.000 | 0.000 | **1.000** | **0.022** | **0.002** |
+| **Guardyn** | validation | 1.000 | **0.000** | **0.000** | 0.000 | 0.000 | **1.000** | **0.022** | **0.002** |
 
 The baseline's validation failure is `enterprise_val_encoded_exfil`: its taint matching
 is verbatim and the payload is base64.
@@ -129,7 +129,7 @@ is verbatim and the payload is base64.
 `AUTHENTICATED_USER` before anything untrusted is read. A document cannot add a tool to
 it. This is what stops false-approval and forged-closure with no content analysis at all.
 
-**Guadryn labels.** Two axes, joined as weakest-trust and strongest-sensitivity. Memory
+**Guardyn labels.** Two axes, joined as weakest-trust and strongest-sensitivity. Memory
 freezes its label at write time, so a fake policy planted by a newsletter in turn 1
 cannot outrank the real policy document in turn 2. Recall does not launder trust.
 
@@ -177,7 +177,7 @@ not supported by your request*; the trace keeps the reason codes and the evidenc
   provide. See `docs/not-built.md`.
 - **No internal model signals.** Attention and hidden-state probes need the agent's
   forward pass. Over `--defense-url` the defense never sees it.
-- **Numbers in the table above are from the mock model.** Qwen3-8B results for the original pipeline and for Isnad-Flow are in the section at the top.
+- **Numbers in the table above are from the mock model.** Qwen3-8B results for the original pipeline and for Guardyn-Flow are in the section at the top.
 - **Humans stay in the loop** for every consequential action without a recorded
   confirmation, and an action attributable to untrusted content is never laundered by
   routing it past a human — `request_confirmation` gets no risk discount when injection

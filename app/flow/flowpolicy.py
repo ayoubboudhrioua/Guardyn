@@ -3,7 +3,7 @@
 Rule (FIDES / CaMeL style): a protected atom whose sensitivity is above a sink's ceiling may
 reach that sink only if the user's own request licensed that kind of disclosure. The rule is
 applied to every sink - the reply, internal records, memory and outbound tools - not only to
-external ones. The previous Isnad checked external sinks alone, which is how a restricted
+external ones. The previous Guardyn checked external sinks alone, which is how a restricted
 service-account token could be read on request and then repeated in the reply.
 
 Matching happens in canonical space (`normalize` strips spacing and punctuation, `closure`
