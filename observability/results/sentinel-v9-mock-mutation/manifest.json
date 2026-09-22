@@ -1,0 +1,22 @@
+{
+  "model": "mock",
+  "model_digest": null,
+  "source_digest": "59512fe3c0c03f23cbb431f5385721635293575b5a2b5c470cf380c32426ff68",
+  "sentinel_commit": "dd2e5fe0979d0781a4bfe6d0849cd80cf69ef4a2",
+  "splits": [
+    "public",
+    "validation"
+  ],
+  "mode": "flow",
+  "judge_enabled": false,
+  "disabled_layers": [],
+  "attack_mode": "adaptive",
+  "attacker": "mutation",
+  "subset": "all",
+  "runtime": {
+    "thinking": false,
+    "max_new_tokens": 768,
+    "max_context_chars": 12000
+  },
+  "note": "Official evaluator, agent, prompt, tools, parser and graders. Runtime settings declared; diagnostic scores are not jury scores."
+}

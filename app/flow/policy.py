@@ -8,7 +8,6 @@ exactly what is enforced and an ablation can swap one out.
 from __future__ import annotations
 
 import os
-import re
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -52,6 +51,8 @@ class PolicySet:
     tool_sinks: dict[str, str] = field(default_factory=dict)
     kinds: dict[str, dict] = field(default_factory=dict)
     max_calls_per_tool: int = 8
+    disclosure_grants: list[dict] = field(default_factory=list)
+    enforce_budget: bool = False
 
     def ceiling(self, sink: str) -> int:
         """Sensitivity rank that may reach `sink` unlicensed."""
@@ -63,14 +64,20 @@ class PolicySet:
                 return kind
         return None
 
-    def licensed(self, kind: str | None, goal: str) -> bool:
-        """Did the user's own goal ask for this kind of thing?"""
-        if kind is None:
-            return False
-        goal_l = " ".join(goal.lower().split())
-        for term in self.kinds.get(kind, {}).get("goal_terms", []):
-            if re.search(rf"(?<![a-z0-9]){re.escape(term.lower())}s?(?![a-z0-9])", goal_l):
-                return True
+    def permits_disclosure(self, atom, sink: str, action: CandidateAction) -> bool:
+        """Only resource/field/sink-scoped grants from trusted policy declassify data."""
+        for grant in self.disclosure_grants:
+            if not isinstance(grant, dict):
+                continue
+            if grant.get("source_id") != atom.source_id or grant.get("field") != atom.key:
+                continue
+            if sink not in grant.get("sinks", []):
+                continue
+            if sink == "external":
+                recipient = action.arguments.get("to") or action.arguments.get("url")
+                if not recipient or grant.get("recipient") != recipient:
+                    continue
+            return True
         return False
 
 
@@ -86,10 +93,12 @@ def select(request: DefenseRequest) -> PolicySet:
             break
     return PolicySet(
         name=merged.get("name", "base"),
-        sinks=merged.get("sinks", {}),
-        tool_sinks=merged.get("tool_sinks", {}),
+        sinks={**merged.get("sinks", {}), **request.policy_context.get("sinks", {})},
+        tool_sinks={**merged.get("tool_sinks", {}), **request.policy_context.get("tool_sinks", {})},
         kinds=merged.get("disclosure_kinds", {}),
         max_calls_per_tool=int((merged.get("budgets") or {}).get("max_calls_per_tool", 8)),
+        disclosure_grants=list(request.policy_context.get("disclosure_grants", [])),
+        enforce_budget=bool((merged.get("budgets") or {}).get("enforce", False)),
     )
 
 

@@ -74,11 +74,14 @@ def label_conversation(request) -> list[tuple[object, Label]]:
     """Attach a joined label to every conversation item."""
     prov = {r.id: r.provenance for r in request.provenance}
     out = []
-    for item in request.conversation:
+    from app.context import observed_items
+    for item in observed_items(request):
         parts = [
             Label(trust=prov[p].trust_level, sensitivity=prov[p].sensitivity)
             for p in item.provenance_ids
             if p in prov
         ]
-        out.append((item, join_all(parts) if parts else Label(trust="trusted_internal", sensitivity="internal")))
+        if len(parts) != len(item.provenance_ids) or not parts:
+            parts.append(Label(trust="untrusted_internal", sensitivity="internal"))
+        out.append((item, join_all(parts)))
     return out

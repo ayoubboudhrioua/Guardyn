@@ -32,6 +32,7 @@
   .sub{color:var(--ink-soft);max-width:62ch;margin:0}
 
   .controls{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;margin:1.25rem 0 0}
+  .controls select{max-width:100%}
   select,button,label.file{
     font:inherit;font-size:13px;background:var(--card);color:var(--ink);
     border:1px solid var(--rule);border-radius:2px;padding:.45rem .7rem;cursor:pointer;
@@ -75,13 +76,13 @@
 
   /* the hero: who is asking for this action */
   .balance{margin:.7rem 0 .5rem;max-width:520px}
-  .bar{display:flex;height:22px;border:1px solid var(--rule);background:var(--card)}
-  .bar i{display:block;height:100%}
+  .bar{height:24px;border:1px solid var(--rule);background:var(--card)}
+  .bar i{display:block;height:50%}
   .bar .m{background:var(--mandate)}
-  .bar .d{background:var(--directive);margin-left:auto}
+  .bar .d{background:var(--directive)}
   .blabel{display:flex;justify-content:space-between;font-size:12px;color:var(--ink-soft);margin-top:.25rem}
 
-  .risk{display:flex;align-items:center;gap:.6rem;font-size:13px;margin:.4rem 0}
+  .risk{display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;font-size:13px;margin:.4rem 0}
   .meter{width:190px;height:8px;background:var(--rule-soft);position:relative}
   .meter i{display:block;height:100%;background:var(--ink)}
   .meter::after{content:"";position:absolute;left:72%;top:-3px;height:14px;border-left:1px dashed var(--block)}
@@ -100,7 +101,7 @@
   .pp div{color:var(--soft)}
   .pp em{font-style:normal;color:var(--block);font-weight:700}
   .codes{display:flex;flex-wrap:wrap;gap:.35rem;margin:.5rem 0 0}
-  .code{font-size:12px;border:1px solid var(--rule);padding:.1rem .4rem;background:var(--card)}
+  .code{font-size:12px;border:1px solid var(--rule);padding:.1rem .4rem;background:var(--card);overflow-wrap:anywhere}
   .code b{font-weight:700}
 
   details{margin-top:.6rem;border-top:1px solid var(--rule-soft);padding-top:.5rem}
@@ -117,11 +118,12 @@
 <body>
 <div class="wrap">
 <header>
-  <h1>Decision ledger</h1>
-  <p class="sub">Every action the agent proposed, what the defense decided, and the evidence it decided from. The balance bar shows whether the user's goal or an untrusted instruction accounts for each action.</p>
+  <h1>Guardyn / decision evidence</h1>
+  <p class="sub">Proposed action → safety decision → observed execution. The two bars show independent heuristic matches to trusted intent and untrusted directives. Risk and confidence are not calibrated probabilities.</p>
   <div class="controls">
     <select id="run" aria-label="Run"></select>
     <button id="only" aria-pressed="false">Interventions only</button>
+    <button id="refresh">Refresh trace</button>
     <label class="file">Load decisions.jsonl<input type="file" id="file" accept=".jsonl,.json"></label>
   </div>
 </header>
@@ -132,14 +134,6 @@
 
 <script>
 const S = { rows: [], run: null, only: false };
-
-const WEIGHTS = {
-  TOOL_NOT_REQUIRED_FOR_GOAL:.95, SENSITIVE_TO_UNTRUSTED_SINK:.93,
-  UNTRUSTED_INSTRUCTION_SOURCE:.90, PARAMETER_ONLY_IN_UNTRUSTED:.72,
-  RECALLED_UNTRUSTED_AUTHORITY:.65, MISSING_CONFIRMATION:.58,
-  FRAGMENTED_INSTRUCTION:.55, OBFUSCATED_INSTRUCTION:.50,
-  MEMORY_INHERITS_TRUST:.22, CONTAINED_AT_SINK:0
-};
 
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
@@ -156,6 +150,17 @@ function argsOf(a){
     return e.map(([k,v]) => `${k}=${String(v).slice(0,90)}`).join('  ');
   }
   return String(a.content || '').slice(0,160);
+}
+
+const score = value => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(3) : 'unavailable';
+const percent = value => typeof value === 'number' && Number.isFinite(value) ? Math.round(Math.max(0,Math.min(1,value))*100) : 0;
+function executionSummary(execution){
+  const results = execution.tool_results || [];
+  const parts = results.map(r => `${r.tool}: ${r.succeeded === true ? 'completed' : r.succeeded === false ? 'failed' : 'result recorded'}`);
+  if(execution.response_emitted) parts.push('Response emitted.');
+  if(!results.length && (execution.tools_requested || []).length) parts.push('Tool requested; completion not recorded.');
+  if(!parts.length) parts.push('No tool execution or response emission recorded at this step.');
+  return parts.join(' ');
 }
 
 function render(){
@@ -182,9 +187,12 @@ function render(){
   }
 
   list.innerHTML = rows.map(r => {
-    const m = Math.round((r.mandate_support ?? 0) * 100);
-    const d = Math.round((r.directive_support ?? 0) * 100);
+    const m = percent(r.mandate_support);
+    const d = percent(r.directive_support);
+    const modelChecks = Object.values(r.model_layers || {});
+    const completedChecks = modelChecks.filter(c => c && c.ran === true).length;
     const sig = Object.entries(r.signals || {}).sort((a,b) => b[1]-a[1]);
+    const flow = r.flow_findings || [];
     const ev = r.evidence || {};
     const span = (ev.directive && ev.directive.span) || (ev.assembled_from && ev.assembled_from.span)
               || (ev.recalled_directive && ev.recalled_directive.span) || '';
@@ -199,19 +207,29 @@ function render(){
         </div>
 
         <div class="balance">
-          <div class="bar" role="img" aria-label="Goal accounts for ${m} percent, untrusted instruction for ${d} percent">
+          <div class="bar" role="img" aria-label="Heuristic intent match ${m} percent, independent directive match ${d} percent">
             <i class="m" style="width:${m}%"></i><i class="d" style="width:${d}%"></i>
           </div>
-          <div class="blabel"><span>goal accounts for ${m}%</span><span>untrusted instruction ${d}%</span></div>
+          <div class="blabel"><span>intent match ${m}%</span><span>directive match ${d}%</span></div>
         </div>
 
         <div class="risk">
-          <div class="meter" title="dashed line is the block threshold"><i style="width:${Math.round((r.risk||0)*100)}%"></i></div>
-          <span>risk ${(r.risk ?? 0).toFixed(3)}</span>
+          <div class="meter" title="Heuristic risk; policy can block independently"><i style="width:${percent(r.risk)}%"></i></div>
+          <span>risk ${score(r.risk)}</span>
+          <span>confidence ${score(r.confidence)}</span>
         </div>
 
-        <p class="why">${esc(r.explanation || '')}</p>
+        <p class="why"><b>Agent feedback:</b> ${esc(r.explanation || '')}</p>
+        ${r.ladder ? `<p><b>Enforcement:</b> ${esc(r.ladder.reason || r.decision)} ${esc((r.ladder.notes || []).join('; '))}</p>` : ''}
+        ${flow.length ? `<details open><summary>Protected data: source → destination</summary>
+          ${flow.map(f => `<p>${esc(f.source_id || f.origin)} / ${esc(f.key)} (${esc(f.sensitivity)}) → ${esc(f.sink)}. Match: ${esc(f.encoding)}. Value withheld.</p>`).join('')}
+        </details>` : ''}
+        ${r.rewritten_action ? `<details open><summary>Verified replacement action</summary><pre>${esc(JSON.stringify(r.rewritten_action, null, 2))}</pre></details>` : ''}
+        ${r.enforcement ? `<p class="args">${r.enforcement.original_permitted ? 'Original action permitted.' : r.enforcement.replacement_permitted ? 'Original action withheld; verified replacement permitted.' : r.enforcement.awaiting_approval ? 'Execution requires approval.' : 'Action blocked.'} ${r.execution ? 'Execution evidence is joined below.' : 'No execution evidence attached.'}</p>` : ''}
+        ${r.model_layers ? `<details><summary>Model checks: ${completedChecks ? completedChecks + ' completed' : 'none completed (skipped or unavailable)'}</summary><p>Configured judge: ${esc(r.judge_model || 'unspecified')}</p><pre>${esc(JSON.stringify(r.model_layers, null, 2))}</pre></details>` : ''}
+        ${r.execution ? `<section><h4>Observed simulator execution</h4><p>${esc(executionSummary(r.execution))}</p><details><summary>Raw execution events</summary><pre>${esc(JSON.stringify(r.execution, null, 2))}</pre></details></section>` : ''}
 
+        ${(r.committee||[]).length ? '<p class="args">Initial committee, before final safety enforcement:</p>' : ''}
         <div class="jury">${(r.committee||[]).map(j =>
           `<span class="jv" data-v="${esc(j.verdict)}"><b>${esc(j.judge)}</b> ${esc(j.verdict)}</span>`).join('')}
           ${r.committee_split ? '<span class="jv" data-v="escalate">judges split</span>' : ''}</div>
@@ -226,7 +244,7 @@ function render(){
             ? `<em>(${esc(p.trust)})</em>` : `(${esc(p.trust)})`}</div>`).join('')}</div>` : ''}
 
         <div class="codes">${sig.map(([c,v]) =>
-          `<span class="code"><b>${esc(c)}</b> ${v.toFixed(2)}&times;${(WEIGHTS[c] ?? .4).toFixed(2)}</span>`).join('')
+          `<span class="code"><b>${esc(c)}</b> severity ${score(v)}</span>`).join('')
           || '<span class="code">USER_GOAL_ALIGNED</span>'}</div>
 
         ${span ? `<details><summary>Evidence span the decision rests on</summary>
@@ -240,7 +258,7 @@ function render(){
 }
 
 function load(text){
-  S.rows = text.split('\n').filter(l => l.trim()).map(l => {
+  S.rows = text.trim().startsWith('[') ? JSON.parse(text) : text.split('\n').filter(l => l.trim()).map(l => {
     try { return JSON.parse(l); } catch { return null; }
   }).filter(Boolean);
   document.getElementById('run').innerHTML = '';
@@ -259,7 +277,12 @@ document.getElementById('file').addEventListener('change', e => {
   if(f) f.text().then(load);
 });
 
-fetch('decisions.jsonl').then(r => r.ok ? r.text() : Promise.reject()).then(load).catch(() => render());
+function refresh(){
+  return fetch('/v1/trace').then(r => r.ok ? r.text() : Promise.reject()).then(load)
+    .catch(() => fetch('decisions.jsonl').then(r => r.ok ? r.text() : Promise.reject()).then(load).catch(() => render()));
+}
+document.getElementById('refresh').addEventListener('click', refresh);
+refresh();
 </script>
 </body>
 </html>

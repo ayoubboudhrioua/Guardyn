@@ -1,10 +1,9 @@
 """Risk fusion.
 
 Signals are combined with a weighted noisy-OR rather than an additive score. Each
-signal is an independent piece of evidence that this action is not the user's; any
-one of them can carry the decision, and several agreeing push risk up without ever
-leaving [0,1]. That keeps the number meaningful as a probability, which is what the
-calibration numbers in the report depend on.
+signal contributes evidence that this action may exceed its authority. Correlated
+signals and hand-set weights mean this is a heuristic score in [0,1], not a
+calibrated probability. Calibration must be measured on separate labeled runs.
 """
 
 from __future__ import annotations

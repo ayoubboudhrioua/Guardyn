@@ -9,9 +9,10 @@ from __future__ import annotations
 
 import os
 import time
+from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 
 from app.decide import evaluate as legacy_evaluate
 from app.flow.engine import evaluate as flow_evaluate
@@ -26,6 +27,11 @@ ABLATE = {s.strip() for s in os.environ.get("SENTINEL_ABLATE", "").split(",") if
 CAPTURE = os.environ.get("GUARDYN_CAPTURE", "")
 
 app = FastAPI(title="SENTINEL defense", docs_url=None, redoc_url=None, openapi_url=None)
+
+
+@app.get("/", include_in_schema=False)
+def dashboard():
+    return FileResponse(Path(__file__).resolve().parents[1] / "observability" / "index.html")
 
 
 @app.get("/healthz")

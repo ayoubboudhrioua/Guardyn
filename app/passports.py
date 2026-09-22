@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 from app.canonical import closure, normalize
 from app.labels import Label, label_conversation
+from app.controls import control_arguments
 
 CONTROL_MAX_CHARS = 80
 
@@ -35,25 +36,13 @@ class Passport:
             "first_seen": self.first_seen,
             "source_kind": self.source_kind,
             "trust": self.label.trust,
+            "observed": self.found,
         }
 
 
-def control_arguments(action) -> dict[str, str]:
-    """Values that steer *which* action this is, as opposed to cargo it carries.
-
-    A long free-text body is data. Conflating the two is what makes naive taint
-    tracking refuse to let an analyst quote a phishing mail into a case note.
-    """
-    if action.type != "tool_call":
-        return {}
-    return {
-        k: str(v)
-        for k, v in action.arguments.items()
-        if v is not None and 3 <= len(str(v)) <= CONTROL_MAX_CHARS
-    }
-
-
 def issue(request, action, contract) -> list[Passport]:
+    from app.decide import action_digest
+    confirmed = action_digest(action) in request.history_digest.confirmations_granted
     labelled = label_conversation(request)
     goal_norm = normalize(contract.goal)
     out: list[Passport] = []
@@ -61,6 +50,9 @@ def issue(request, action, contract) -> list[Passport]:
     for name, value in control_arguments(action).items():
         needle = normalize(value)
         if len(needle) < 3:
+            continue
+        if confirmed:
+            out.append(Passport(name, value, Label(trust="authenticated_user"), "confirmation", "authenticated approval of this exact action", True))
             continue
         if needle in goal_norm:
             out.append(Passport(name, value, Label(trust="authenticated_user"), "user_goal", "user goal", True))
@@ -71,10 +63,10 @@ def issue(request, action, contract) -> list[Passport]:
                 hit = (item, label)
                 break
         if hit is None:
-            out.append(Passport(name, value, Label(trust="trusted_internal"), "agent", "not observed", False))
+            out.append(Passport(name, value, Label(trust="untrusted_internal"), "agent", "not observed", False))
         else:
             item, label = hit
-            out.append(Passport(name, value, label, item.kind or item.role, f"{item.role}/{item.kind}", True))
+            out.append(Passport(name, value, label, item.kind or item.role, f"{item.role}/{item.kind} ({','.join(item.provenance_ids)})", True))
     return out
 
 

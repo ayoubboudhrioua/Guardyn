@@ -21,6 +21,8 @@ import re
 from app.models import CandidateAction, DefenseRequest
 from app.canonical import closure, normalize, squash
 from app.directives import Directive, extract
+from app.controls import control_arguments
+from app.context import observed_items
 
 UNTRUSTED = {"untrusted_internal", "untrusted_external", "adversary_controlled"}
 SENSITIVE = {"confidential", "restricted"}
@@ -34,9 +36,9 @@ def split_by_trust(request: DefenseRequest) -> tuple[list[str], list[str], list[
     untrusted: list[str] = []
     trusted: list[str] = []
     sensitive: list[str] = []
-    for item in request.conversation:
+    for item in observed_items(request):
         ps = [prov[p] for p in item.provenance_ids if p in prov]
-        if any(p.trust_level in UNTRUSTED for p in ps):
+        if not ps or len(ps) != len(item.provenance_ids) or any(p.trust_level in UNTRUSTED for p in ps):
             untrusted.append(item.content)
         else:
             trusted.append(item.content)
@@ -58,11 +60,7 @@ def action_values(action: CandidateAction) -> list[str]:
     """
     if action.type != "tool_call":
         return []
-    return [
-        str(v)
-        for v in action.arguments.values()
-        if v is not None and 3 <= len(str(v)) <= CONTROL_MAX_CHARS
-    ]
+    return list(control_arguments(action).values())
 
 
 def data_values(action: CandidateAction) -> list[str]:
@@ -101,8 +99,9 @@ def directive_support(action: CandidateAction, directives: list[Directive]) -> t
             score += 0.6
         blob = normalize(d.text)
         if values:
-            matched = sum(1 for v in values if v in blob)
-            score += 0.4 * (matched / len(values))
+            # One injected routing argument is enough to redirect an action.
+            # Unrelated optional arguments must not dilute that evidence.
+            score += 0.4 if any(v in blob for v in values) else 0.0
         if score > best:
             best, best_d = min(score, 1.0), d
     return best, best_d

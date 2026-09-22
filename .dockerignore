@@ -1,0 +1,13 @@
+# Ship the service and dashboard, not development traces or synthetic fixtures.
+**
+!Dockerfile
+!requirements.txt
+!requirements.lock.txt
+!app/
+!app/**
+!policies/
+!policies/**
+!observability/
+!observability/index.html
+**/__pycache__/**
+**/*.pyc

@@ -42,9 +42,21 @@ def choose(
     `recheck(action)` returns the leftover findings for a rewritten action."""
     notes: list[str] = []
 
+    if any(f.code == "LIFECYCLE_SKIPPED" for f in flags):
+        return Outcome("block", reason="policy", notes=["required lifecycle predecessor was not executed"])
+
+    if any(f.code == "CALL_BUDGET_EXCEEDED" and f.evidence.get("enforce") for f in flags):
+        return Outcome("block", reason="budget", notes=["active policy call budget exhausted"])
+
     # 1. The old committee already blocked: nothing on this ladder is gentler than that.
     if legacy == "block":
         return Outcome("block", reason="policy", notes=["legacy committee blocked"])
+
+    # Internal destinations do not make command-driven writes harmless. A
+    # directive must actually supply a routing argument or name the tool; merely
+    # quoting hostile prose in a payload does not trigger this check.
+    if exposes and any(f.code == "UNTRUSTED_INSTRUCTION_SOURCE" and f.severity >= 0.5 for f in flags):
+        return Outcome("block", reason="authority", notes=["write follows an untrusted directive outside its mandate"])
 
     # 2. Protected data is heading somewhere it may not go.
     if findings:

@@ -13,9 +13,9 @@ import os
 import time
 
 from app import authority, suspicion
-from app.canonical import normalize
+from app.canonical import normalize, closure
 from app.decide import CATEGORY, evaluate as legacy_evaluate, target_of
-from app.flow import counterfactual, flowpolicy, judge, llm, policy
+from app.flow import counterfactual, flowpolicy, judge, llm, policy, verify
 from app.flow import ledger as ledger_mod
 from app.flow.flags import SINK_FLAG, Flag, from_legacy, signals as flag_signals
 from app.flow.ladder import choose
@@ -63,7 +63,7 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
         flags.append(Flag(code, 1.0, "L3", f.as_dict()))
     over = 0 if "BUDGET" in DISABLED else policy.call_budget_exceeded(pol, request, action)
     if over:
-        flags.append(Flag("CALL_BUDGET_EXCEEDED", 0.6, "L2", {"tool": action.tool, "prior_calls": over}))
+        flags.append(Flag("CALL_BUDGET_EXCEEDED", 0.6, "L2", {"tool": action.tool, "prior_calls": over, "enforce": pol.enforce_budget}))
 
     sink = policy.sink_of(pol, request, action)
     consequential = trace["contract"] and action.tool in set(trace["contract"].get("consequential_tools", []))
@@ -89,7 +89,7 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
     risk = round(1.0 - (1.0 - trace["risk"]) * (1.0 - fuse(flag_signals(new_only))), 4)
 
     def recheck(rewritten):
-        return flowpolicy.check(request, rewritten, atoms, pol)
+        return verify.violations(request, rewritten, atoms, pol)
 
     outcome = choose(
         legacy=legacy.decision,
@@ -102,6 +102,10 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
         exposes=exposes,
         recheck=recheck,
     )
+    verification = recheck(outcome.rewritten) if outcome.rewritten is not None else []
+    if verification:
+        from app.flow.ladder import Outcome
+        outcome = Outcome("block", reason="rewrite-verification", notes=verification)
     layers = [x for x in layers if x not in DISABLED]
 
     if outcome.decision != legacy.decision or outcome.rewritten != legacy.rewritten_action:
@@ -114,6 +118,10 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
         "That action was not permitted here.",
     )
     explanation = "Action is accounted for by your request." if outcome.decision == "allow" else message
+    if outcome.decision == "rewrite" and outcome.reason == "redact":
+        explanation = "Sensitive details were removed and the replacement action was verified."
+    elif outcome.decision == "block" and outcome.reason in ("flow", "rewrite-verification"):
+        explanation = "This action cannot be safely repaired under the active policy."
 
     decision = DefenseDecision(
         decision=outcome.decision,
@@ -144,6 +152,19 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
             "model_layers": model_info,
             "ladder": {"reason": outcome.reason, "notes": outcome.notes},
             "legacy_decision": legacy.decision,
+            "signals": sig,
+            "confidence": decision.confidence,
+            "candidate_action": candidate.model_dump(),
+            "explanation": decision.explanation,
+            "rewritten_action": outcome.rewritten.model_dump() if outcome.rewritten else None,
+            "enforcement": {
+                "original_permitted": outcome.decision == "allow",
+                "replacement_permitted": outcome.decision == "rewrite",
+                "awaiting_approval": outcome.decision == "escalate",
+                "rewrite_checks": verification,
+                "execution_observed": False,
+            },
+            "judge_model": llm.MODEL,
             "flow_latency_ms": round((time.perf_counter() - started) * 1000, 2),
         }
     )
@@ -154,8 +175,20 @@ def _scrub_trace(trace: dict, atoms: list[ledger_mod.Atom]) -> dict:
     """The trace is a file on disk. It must not become a second place the secret leaks to."""
     if not atoms:
         return trace
-    text = json.dumps(trace, default=str)
-    for atom in atoms:
-        text = flowpolicy.pattern(normalize(atom.value)).sub("[REDACTED]", text)
-        text = text.replace(atom.value, "[REDACTED]")
-    return json.loads(text)
+    protected_values = {atom.value for atom in atoms}
+    def scrub(value):
+        if isinstance(value, dict):
+            return {key: scrub(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [scrub(item) for item in value]
+        if not isinstance(value, str):
+            return "[REDACTED]" if type(value) in (int, float) and str(value) in protected_values else value
+        for atom in atoms:
+            needle = normalize(atom.value)
+            cleaned = flowpolicy.pattern(needle).sub("[REDACTED]", value)
+            if cleaned != value:
+                value = cleaned
+            elif len(needle) >= 6 and needle in normalize(closure(value)):
+                value = "[REDACTED:encoded]"
+        return value
+    return scrub(trace)

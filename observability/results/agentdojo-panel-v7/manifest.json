@@ -1,0 +1,20 @@
+{
+  "model": "qwen3.5:9b",
+  "defended": true,
+  "version": "v1.2.2",
+  "suites": [
+    "banking",
+    "workspace",
+    "slack",
+    "travel"
+  ],
+  "attacks": [
+    "ignore_previous",
+    "system_message"
+  ],
+  "limit": 4,
+  "injection_limit": 2,
+  "source_digest": "381bb9dfb1ba4eecce72d8b976b317ece7c9ede447f60b80bae9af9d2a6e5c7c",
+  "agentdojo_commit": "089ed468cf3ed0322acc66b0211f26d9d90dbf60",
+  "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7"
+}

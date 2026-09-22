@@ -15,6 +15,9 @@ from app.canonical import closure, squash
 # "call <tool> with {...}" is the canonical shape, but we do not rely on it alone.
 _CALL = re.compile(r"\b(?:call|invoke|run|execute|use)\s+([a-z][a-z0-9_]{2,63})\b", re.I)
 _JSONISH = re.compile(r"\{[^{}]{0,400}\}")
+# Formatting is not an authority boundary. A short bracketed heading or
+# markdown bullet must not hide an imperative in the following observed text.
+_FRAMING = re.compile(r"^\s*(?:[#>*-]+\s*)?(?:\[[^\]\n]{1,48}\]|\([^\)\n]{1,48}\)|<[^>\n]{1,48}>)\s*")
 _IMPERATIVE_LEAD = re.compile(
     r"(?m)^\s*(?:please\s+)?(?:now\s+)?(?:you\s+must\s+|you\s+should\s+)?"
     r"(call|invoke|run|execute|send|forward|email|draft|reply|paste|include|attach|"
@@ -58,7 +61,8 @@ def extract(text: str, known_tools: list[str]) -> list[Directive]:
         encoded = squash(segment) not in plain_norm
         tools = {m.group(1).lower() for m in _CALL.finditer(segment)}
         tools |= {t for t in known_tools if re.search(rf"\b{re.escape(t)}\b", segment, re.I)}
-        imperative = bool(_IMPERATIVE_LEAD.search(segment)) or bool(_CALL.search(segment))
+        normalized_lead = _FRAMING.sub("", segment)
+        imperative = bool(_IMPERATIVE_LEAD.search(normalized_lead)) or bool(_CALL.search(segment))
         if not tools and not imperative:
             continue
         found.append(Directive(segment, sorted(tools), _values_in(segment), encoded))

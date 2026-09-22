@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "model": "mock",
+  "source_digest": "59512fe3c0c03f23cbb431f5385721635293575b5a2b5c470cf380c32426ff68",
+  "configuration_issues": [],
+  "splits": {
+    "public": {
+      "passed": true,
+      "case_count": 40,
+      "issues": []
+    },
+    "validation": {
+      "passed": true,
+      "case_count": 9,
+      "issues": []
+    }
+  },
+  "note": "Full-library local gate only. Passing is not universal security, a jury score, or proof of defense-caused prevention."
+}

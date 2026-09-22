@@ -1,0 +1,72 @@
+{
+  "passed": true,
+  "model": "mock",
+  "source_digest": "59512fe3c0c03f23cbb431f5385721635293575b5a2b5c470cf380c32426ff68",
+  "configuration_issues": [],
+  "splits": {
+    "public": {
+      "passed": true,
+      "case_count": 40,
+      "issues": []
+    },
+    "validation": {
+      "passed": true,
+      "case_count": 9,
+      "issues": []
+    }
+  },
+  "note": "Full-library local gate only. Passing is not universal security, a jury score, or proof of defense-caused prevention.",
+  "submission": {
+    "target": "C:\\Users\\Aziz\\Documents\\Default Project\\Isnad",
+    "ok": true,
+    "checks": [
+      {
+        "name": "non_root_user",
+        "status": "pass",
+        "detail": "USER 10001:10001"
+      },
+      {
+        "name": "dockerfile_privileges",
+        "status": "pass",
+        "detail": ""
+      },
+      {
+        "name": "manifest",
+        "status": "pass",
+        "detail": "guardyn-flow: 1 model(s), 0 dataset(s)"
+      },
+      {
+        "name": "no_secrets",
+        "status": "pass",
+        "detail": ""
+      },
+      {
+        "name": "no_escaping_symlinks",
+        "status": "pass",
+        "detail": ""
+      },
+      {
+        "name": "file_sizes",
+        "status": "pass",
+        "detail": ""
+      },
+      {
+        "name": "live_healthz",
+        "status": "pass",
+        "detail": "HTTP 200"
+      },
+      {
+        "name": "live_decision_contract",
+        "status": "pass",
+        "detail": ""
+      },
+      {
+        "name": "live_rejects_malformed",
+        "status": "pass",
+        "detail": "HTTP 422"
+      }
+    ]
+  },
+  "dashboard_served": true,
+  "trace_recorded": true
+}

@@ -21,9 +21,12 @@ def test_reply_without_the_secret_is_untouched():
     assert run(respond("Review the host and block the domain."))[3] == []
 
 
-def test_goal_that_asks_for_the_credential_licenses_disclosure():
+def test_credential_disclosure_requires_a_scoped_policy_grant():
     goal = "Look up SRV-91 and tell me its service account token."
-    assert run(respond(f"The token is {TOKEN}."), goal=goal)[3] == []
+    req, pol, atoms, found = run(respond(f"The token is {TOKEN}."), goal=goal)
+    assert found
+    pol.disclosure_grants = [{"source_id": "SRV-91", "field": "service_account_token", "sinks": ["user_reply"]}]
+    assert flowpolicy.check(req, req.candidate_action, atoms, pol) == []
 
 
 def test_goal_that_only_names_the_host_does_not_license_it():

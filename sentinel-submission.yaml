@@ -1,19 +1,20 @@
 name: guardyn-flow
 kind: defense
 api_version: v1
-team: your-team-name
+team: التعاضدية الرسمية المعلوماتية
 port: 8080
-# The judge (L4) and counterfactual (L5) layers call a local Qwen3-8B through Ollama.
+# The judge (L4) and counterfactual (L5) layers call local Qwen3.5-9B through Ollama.
 # Both are optional: with GUARDYN_LLM=off the deterministic layers still decide alone.
 models:
-  - name: qwen3:8b
-    source: https://ollama.com/library/qwen3 (weights: https://huggingface.co/Qwen/Qwen3-8B)
+  - name: qwen3.5:9b
+    source: https://huggingface.co/Qwen/Qwen3.5-9B
     license: Apache-2.0
 datasets: []
 resources:
   memory: 2g
   cpus: 1.0
-  gpus: 1
+  # Ollama runs separately on the host GPU; this HTTP defense container uses CPU.
+  gpus: 0
 description: >-
   Guardyn-Flow. Information-flow control (need-to-know disclosure per sink), declarative per-domain
   policies, a datamarked task-alignment judge and a masked re-planning check, fused into typed

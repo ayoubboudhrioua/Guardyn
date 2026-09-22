@@ -2,4 +2,12 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+dist/
+.env
+.env.*
+!.env.example
+# Keep compact reports, source snapshots and scrubbed playback evidence.
+# Raw simulator payloads and infrastructure logs remain local.
+observability/results/**/simulator/
+observability/results/**/*.log
 

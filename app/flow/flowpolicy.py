@@ -1,7 +1,7 @@
 """L3 - flow policy: reading a record does not license disclosing everything in it.
 
 Rule (FIDES / CaMeL style): a protected atom whose sensitivity is above a sink's ceiling may
-reach that sink only if the user's own request licensed that kind of disclosure. The rule is
+reach that sink only through a resource/field/destination-scoped policy grant. The rule is
 applied to every sink - the reply, internal records, memory and outbound tools - not only to
 external ones. The previous Guardyn checked external sinks alone, which is how a restricted
 service-account token could be read on request and then repeated in the reply.
@@ -77,7 +77,6 @@ def check(
     if not raw:
         return []
     ceiling = pol.ceiling(sink)
-    said = normalize(user_text(request))
     plain_norm = normalize(raw)
     closed_norm = normalize(closure(raw))
 
@@ -87,8 +86,8 @@ def check(
             continue
         n = normalize(atom.value)
         kind = pol.kind_of(atom.terms)
-        if n in said or pol.licensed(kind, user_text(request)):
-            continue  # the user asked for it
+        if pol.permits_disclosure(atom, sink, action):
+            continue
         frag = _fragment(n, plain_norm)
         if frag:
             out.append(Finding(atom, sink, kind, "plain" if frag == n else "partial", frag))

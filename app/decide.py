@@ -136,7 +136,7 @@ def judge_content(request, action, facts, dial, consequential) -> Verdict:
     v = Verdict("content")
     if facts["directive_count"] >= 3:
         v.signals["DIRECTIVE_DENSITY"] = min(1.0, facts["directive_count"] / 6.0)
-    if dial >= 0.65 and consequential:
+    if dial >= 0.65 and consequential and action_digest(action) not in request.history_digest.confirmations_granted:
         v.signals["SESSION_SUSPICION"] = dial
         v.verdict = ESCALATE
     v.note = f"suspicion dial {dial}"
@@ -151,6 +151,11 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
     action = target_of(request)
 
     facts = authority.analyse(request, action)
+    confirmed = action_digest(action) in request.history_digest.confirmations_granted
+    if confirmed:
+        # A verified approval is authoritative for the exact action digest.
+        # It does not declassify protected data or license tools outside policy.
+        facts["mandate_support"] = 1.0
     contract = compile_contract(request, facts["trusted_texts"])
     known = sorted(contract.allowed_tools | contract.consequential_tools)
     untrusted = facts["untrusted_texts"]
@@ -197,6 +202,7 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
         action.type == "tool_call"
         and action.tool in contract.allowed_tools
         and not consequential
+        and verdicts[0].verdict == ALLOW
         and facts["leak"]["sink"] in (sinks.SINK_INTERNAL, sinks.SINK_USER)
         and not facts["leak"]["leak"]
     )
@@ -226,7 +232,7 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
         alt = safer(action, sorted(contract.allowed_tools))
         if alt is not None:
             outcome, rewritten = "rewrite", alt
-    if outcome == ALLOW and dial >= 0.7 and consequential:
+    if outcome == ALLOW and dial >= 0.7 and consequential and not confirmed:
         alt = safer(action, sorted(contract.allowed_tools))
         if alt is not None:
             outcome, rewritten = "rewrite", alt

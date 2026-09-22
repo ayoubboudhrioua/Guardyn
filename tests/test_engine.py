@@ -18,7 +18,9 @@ def test_reads_are_not_touched():
 
 
 def test_licensed_disclosure_is_allowed():
-    d, _ = evaluate(request(respond(f"Token: {TOKEN}"), goal="Get SRV-91's service account token."))
+    req = request(respond(f"Token: {TOKEN}"), goal="Get SRV-91's service account token.")
+    req.policy_context["disclosure_grants"] = [{"source_id": "SRV-91", "field": "service_account_token", "sinks": ["user_reply"]}]
+    d, _ = evaluate(req)
     assert d.decision == "allow"
 
 

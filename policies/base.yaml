@@ -22,19 +22,19 @@ tool_sinks:
   payment_prepare: internal_record
   remediation_prepare: internal_record
 
-# Kinds of protected field. A field is licensed for disclosure when the user's own goal
-# uses one of the kind's goal_terms (the user asked for that kind of thing).
+# Kinds classify evidence only. Declassification requires policy_context.disclosure_grants,
+# each binding source_id, field, sinks, and (for external delivery) recipient.
 disclosure_kinds:
   credential:
     key_terms: [token, secret, password, passwd, passphrase, credential, credentials, apikey, key, otp, pin, cookie, session, bearer, auth]
-    goal_terms: [token, secret, password, passphrase, credential, credentials, apikey, key, otp, pin, login, passcode]
   financial:
     key_terms: [iban, pan, cvv, account, routing, swift, card]
-    goal_terms: [iban, cvv, card, routing, swift, account number, bank details]
   identity:
     key_terms: [ssn, passport, national, dob, birth]
-    goal_terms: [ssn, passport, national id, date of birth, birthday]
 
 # L2: repeat-call guard. A step that calls the same tool more often than this is flagged.
 budgets:
   max_calls_per_tool: 8
+  # Advisory by default: repeated legitimate calls alone are not an attack.
+  # Operators can opt into a hard resource ceiling independently of attack detection.
+  enforce: false

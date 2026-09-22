@@ -21,6 +21,7 @@ from app.canonical import normalize
 from app.flow import llm
 from app.flow.flags import Flag
 from app.models import CandidateAction, DefenseRequest
+from app.context import observed_items
 
 UNTRUSTED = {"untrusted_internal", "untrusted_external", "adversary_controlled"}
 
@@ -36,7 +37,7 @@ def _trusted_results(request: DefenseRequest) -> tuple[list[str], int]:
     prov = {r.id: r.provenance for r in request.provenance}
     kept: list[str] = []
     withheld = 0
-    for item in request.conversation:
+    for item in observed_items(request):
         if item.role == "user":
             continue
         labels = [prov[p] for p in item.provenance_ids if p in prov]
