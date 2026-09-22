@@ -14,23 +14,22 @@ the replacement and actual execution, not just a risk badge.
 
 Release packaging is v9. See [GitHub handoff](docs/RELEASE.md) for the pinned Docker
 build and push instructions, and [Sentinel readiness](docs/SENTINEL_READINESS.md)
-for the strict gate. Both current full-library mock modes pass; live-Qwen v9 is
-being rerun. The completed live results below remain explicitly labelled v7.
+for the strict gate. Both full-library mock modes pass. Live-Qwen v9 completed
+without errors, but benign utility is not perfect: 9/14 tasks completed.
 
 Local experiments, not jury scores. Versions are deliberately separated.
 
 | Experiment | Successful attacks | Benign completion |
 | --- | --- | --- |
 | Qwen3.5:9b, unprotected, public | 24/31 | 7/9 |
-| Qwen3.5:9b, Guardyn v7, public | 0/31 | 5/9 |
-| Qwen3.5:9b, Guardyn v7, validation | 0/4 | 4/5 |
-| Mock agent, v7, public | 0/31 | 9/9 |
-| Mock agent, v7, validation | 0/4 | 5/5 |
+| Qwen3.5:9b, Guardyn v9, public | 0/31 | 5/9 |
+| Qwen3.5:9b, Guardyn v9, validation | 0/4 | 4/5 |
+| Mock agent, v9, public | 0/31 | 9/9 |
+| Mock agent, v9, validation | 0/4 | 5/5 |
 
-All 35 v7 live attack cases were error-free. One public benign case failed because
-Qwen emitted a malformed confirmation action before the defense could judge it;
-it remains a failed task. Validation had no model errors. There were no defense
-errors in either split. Only 25 attack scenarios had defense interventions; the
+All 49 v9 live cases were evaluated without model or defense errors. Five benign
+tasks still failed their graders; completion loops and an exact-text mismatch
+remain documented. Only 25 attack scenarios had defense interventions; the
 validation attacks failed without intervention. Do not claim 35 literal blocks
 or substitute mock utility for Qwen utility. The older v6 validation experiment
 had six model-unavailability errors and is preserved as invalid failure evidence.
@@ -54,8 +53,8 @@ The latest Sentinel-environment suite passes 87 tests (optional AgentDojo module
 skipped). The browser-tested evidence viewer
 shows observed read/write results, blocked execution and verified replacements.
 
-Current evidence is in `observability/results/sentinel-v7-qwen/public/`,
-`sentinel-v7-qwen-validation/validation/`, `sentinel-v7-mock/`, and `agentdojo-*/`.
+Current Sentinel evidence is in `observability/results/sentinel-v9-qwen/`,
+`sentinel-v9-mock/` and `sentinel-v9-mock-mutation/`. AgentDojo results remain v7.
 The [evidence index](observability/results/README.md) separates old and current runs.
 New scorecards are under each experiment directory; raw simulator events remain
 local in its `simulator/` subdirectory. Earlier runs also used the sibling
@@ -99,7 +98,7 @@ simulator execution evidence; live service traces show decisions only.
 For read-only playback of completed live-Qwen evidence, without a decision endpoint:
 
 ```powershell
-python tools/serve_evidence.py --trace observability/results/sentinel-v7-qwen/public/decisions.jsonl --port 8085
+python tools/serve_evidence.py --trace observability/results/sentinel-v9-qwen/public/decisions.jsonl --port 8085
 ```
 
 Then open http://127.0.0.1:8085. This viewer cannot execute or append tool actions.
