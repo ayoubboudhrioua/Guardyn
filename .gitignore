@@ -11,3 +11,6 @@ dist/
 observability/results/**/simulator/
 observability/results/**/*.log
 
+
+# Live dashboard runs hold raw simulator artifacts and logs; they stay local.
+observability/live_runs/
