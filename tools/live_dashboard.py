@@ -646,6 +646,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--kit", type=Path, required=True)
     parser.add_argument("--runs", type=Path, default=ROOT / "observability" / "live_runs")
+    parser.add_argument("--bind", choices=("127.0.0.1", "0.0.0.0"), default="127.0.0.1",
+                        help="dashboard listen address; use 0.0.0.0 only inside a localhost-published container")
     parser.add_argument("--port", type=int, default=8090)
     parser.add_argument("--qwen-tag", default=DEFAULT_QWEN_TAG, help="exact Ollama tag for the Qwen engine and judge")
     args = parser.parse_args()
@@ -663,7 +665,8 @@ def main():
     lock.write_text(str(os.getpid()))
     import uvicorn
     try:
-        uvicorn.run(create_app(Orchestrator(args.kit, args.runs, qwen_tag=args.qwen_tag), args.port), host="127.0.0.1", port=args.port)
+        uvicorn.run(create_app(Orchestrator(args.kit, args.runs, qwen_tag=args.qwen_tag), args.port),
+                    host=args.bind, port=args.port)
     finally:
         lock.unlink(missing_ok=True)
 

@@ -5,9 +5,12 @@
 !requirements.lock.txt
 !app/
 !app/**
+!tools/
+!tools/**
 !policies/
 !policies/**
 !observability/
 !observability/index.html
+!observability/live.html
 **/__pycache__/**
 **/*.pyc

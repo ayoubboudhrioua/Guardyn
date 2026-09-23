@@ -46,7 +46,21 @@ does not prove whether the simulator executed a tool.
 
 ## Run the live Sentinel dashboard
 
-From the official Sentinel kit's Python environment with Guardyn dependencies:
+Use the pinned Python 3.12 Docker image to avoid mixing the kit and system Python
+environments. The official Sentinel checkout remains on your machine and is mounted
+read-only; live artifacts persist in a named Docker volume. From this repository in
+PowerShell:
+
+```powershell
+$kit = (Resolve-Path ../Sentinel_Starter_Kit).Path
+docker build -t guardyn-live .
+docker run --rm -p 127.0.0.1:8090:8090 --mount "type=bind,src=$kit,dst=/sentinel-kit,readonly" --mount "type=volume,src=guardyn-live-runs,dst=/var/lib/guardyn/live_runs" -e OLLAMA_HOST=http://host.docker.internal:11434 guardyn-live
+```
+
+Ollama must be reachable from the container at `host.docker.internal:11434` for
+Qwen runs. Mock runs do not need Ollama. The dashboard also runs without Docker
+when launched from a Python 3.12 environment containing both the official kit and
+Guardyn dependencies:
 
 ```powershell
 python tools/live_dashboard.py --kit ../Sentinel_Starter_Kit
@@ -69,12 +83,12 @@ python tools/serve_evidence.py --trace observability/results/sentinel-v9-qwen/pu
 
 ```powershell
 python -m pytest -q
-docker build -t guardyn-sentinel .
+docker build -t guardyn-live .
 python tools/package_release.py --output dist/guardyn-source-new
 ```
 
-The Docker image serves the decision API and trace page. The live Sentinel
-orchestrator runs separately with the official kit. CI runs offline tests and a
+The Docker image starts the live Sentinel dashboard by default and launches the
+decision API as an owned child during protected runs. CI runs offline tests and a
 container smoke check; it does not run the local Ollama benchmark. Use a new
 release output directory for each source bundle. `sentinel-submission.yaml`
 declares the team and model. No project software license has been selected.

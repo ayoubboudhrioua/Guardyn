@@ -14,10 +14,13 @@ def test_submission_manifest_is_valid_yaml_and_matches_judge_model():
     assert manifest['api_version'] == 'v1'
 
 
-def test_container_includes_dashboard_and_nonroot_trace_directory():
+def test_container_runs_live_dashboard_with_python_312_and_nonroot_artifacts():
     dockerfile = (ROOT / 'Dockerfile').read_text()
-    assert 'COPY observability/index.html ./observability/index.html' in dockerfile
-    assert 'SENTINEL_TRACE=/var/lib/guardyn/decisions.jsonl' in dockerfile
-    assert 'mkdir -p /var/lib/guardyn' in dockerfile
-    assert 'chown 10001:10001 /var/lib/guardyn' in dockerfile
+    assert dockerfile.startswith('FROM python:3.12-slim@sha256:')
+    assert 'COPY tools ./tools' in dockerfile
+    assert 'COPY observability/live.html ./observability/live.html' in dockerfile
+    assert 'mkdir -p /var/lib/guardyn/live_runs' in dockerfile
+    assert 'chown -R 10001:10001 /var/lib/guardyn' in dockerfile
     assert 'USER 10001:10001' in dockerfile
+    assert 'CMD ["python", "tools/live_dashboard.py"' in dockerfile
+    assert '"--kit", "/sentinel-kit"' in dockerfile

@@ -192,16 +192,19 @@ for the matched control. Tests run with `python -m pytest -q`. The last recorded
 Sentinel environment had 87 passing tests with the optional AgentDojo module
 skipped; this is a historical test result, not a fresh check after this cleanup.
 
-The pinned Dockerfile builds the decision service, not the full dashboard runner:
+The pinned Python 3.12 Dockerfile starts the live Sentinel dashboard. Mount the
+official kit read-only and keep live evidence in a local Docker volume:
 
 ```powershell
-docker build -t guardyn-sentinel .
-docker run --rm -p 127.0.0.1:8080:8080 -e GUARDYN_LLM=off --mount type=volume,source=guardyn-traces,target=/var/lib/guardyn guardyn-sentinel
+$kit = (Resolve-Path ../Sentinel_Starter_Kit).Path
+docker build -t guardyn-live .
+docker run --rm -p 127.0.0.1:8090:8090 --mount "type=bind,src=$kit,dst=/sentinel-kit,readonly" --mount "type=volume,src=guardyn-live-runs,dst=/var/lib/guardyn/live_runs" -e OLLAMA_HOST=http://host.docker.internal:11434 guardyn-live
 ```
 
-This container serves the decision API and evidence page at localhost:8080.
-Optional Ollama checks require a separately reachable model server and declared
-model tag. CI runs offline tests and the container smoke check; it does not prove
+This container serves the live graph at localhost:8090 and launches the decision
+API internally for protected runs. Qwen requires a separately reachable Ollama
+server and the declared model tag; mock does not. CI runs offline tests and a
+container smoke check; it does not prove
 live-model benchmark performance. The team has not selected a project software
 license. `sentinel-submission.yaml` declares the team and model.
 

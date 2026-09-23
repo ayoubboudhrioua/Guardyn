@@ -22,13 +22,8 @@ jobs:
       # CI checks are not live model benchmark results.
       - run: python -m pytest -q
       - run: docker build -t guardyn:ci .
-      - name: Container health and dashboard
+      - name: Container Python and dashboard entrypoint
         run: |
-          docker run --detach --rm --name guardyn-ci -p 127.0.0.1:8080:8080 -e GUARDYN_LLM=off guardyn:ci
-          trap 'docker stop guardyn-ci' EXIT
-          for attempt in $(seq 1 20); do
-            if curl --fail --silent http://127.0.0.1:8080/healthz; then break; fi
-            sleep 1
-          done
-          curl --fail --silent http://127.0.0.1:8080/healthz
-          curl --fail --silent http://127.0.0.1:8080/ | grep -q Guardyn
+          docker run --rm guardyn:ci python --version | grep -q 'Python 3.12.'
+          docker run --rm guardyn:ci python tools/live_dashboard.py --help | grep -q -- '--kit'
+          docker run --rm guardyn:ci python -c 'import typer, rich, fastapi, uvicorn'
