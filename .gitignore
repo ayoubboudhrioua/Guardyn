@@ -6,10 +6,9 @@ dist/
 .env
 .env.*
 !.env.example
-# Keep compact reports, source snapshots and scrubbed playback evidence.
-# Raw simulator payloads and infrastructure logs remain local.
-observability/results/**/simulator/
-observability/results/**/*.log
+# New evaluation output stays local; the tracked v9/v7 jury evidence is curated.
+/observability/results/*
+/observability/decisions.jsonl
 
 
 # Live dashboard runs hold raw simulator artifacts and logs; they stay local.

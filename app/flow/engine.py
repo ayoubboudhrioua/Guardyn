@@ -1,4 +1,4 @@
-"""Guardyn-Flow decision pipeline (L0 to L7). See docs/ARCHITECTURE.md.
+"""Guardyn-Flow decision pipeline (L0 to L7). See docs/JURY_GUIDE.md.
 
 The original Guardyn committee runs first and supplies the deterministic core: the plan contract
 (L0), custody and passports, and the policy and lifecycle judges (L2). Flow adds the ledger and
