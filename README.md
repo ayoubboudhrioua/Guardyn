@@ -117,5 +117,4 @@ Run tests with `python -m pytest -q`; optional AgentDojo tests require its envir
 
 See [architecture](docs/ARCHITECTURE.md), [limitations](docs/not-built.md),
 [technical report](docs/TECHNICAL_REPORT.md), [demo script](docs/DEMO_SCRIPT.md), and
-[work log](docs/WORK_LOG.md). Jury weights are video 40, report 25, creativity 15,
-engineering/responsible AI 20. Simulator composites are not the jury score.
+[work log](docs/WORK_LOG.md).
