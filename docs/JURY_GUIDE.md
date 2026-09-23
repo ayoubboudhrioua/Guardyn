@@ -57,7 +57,7 @@ not a causal proof of injection.
 The Sentinel library is public, with 31 attack/9 benign public cases and 4 attack/5
 benign validation cases. The official simulator, tools, parser, and graders are used.
 The published library informed development; there is no hidden-set claim. Qwen
-means local Ollama `qwen3.5:9b`. Manifests record model digest, benchmark commit,
+means local Ollama `qwen3:8b`. Manifests record model digest, benchmark commit,
 source hash, and runtime settings. Mock uses the evaluator's reference plan and
 turns the optional Guardyn LLM judge off; it is a separate test mode.
 

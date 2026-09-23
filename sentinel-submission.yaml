@@ -6,7 +6,7 @@ port: 8080
 # The judge (L4) and counterfactual (L5) layers call local Qwen3.5-9B through Ollama.
 # Both are optional: with GUARDYN_LLM=off the deterministic layers still decide alone.
 models:
-  - name: qwen3.5:9b
+  - name: qwen3:8b
     source: https://huggingface.co/Qwen/Qwen3.5-9B
     license: Apache-2.0
 datasets: []

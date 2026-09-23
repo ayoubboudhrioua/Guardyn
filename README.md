@@ -11,7 +11,7 @@ mechanism, current evidence, limitations, demo outline, and reproduction notes.
 
 ## Evidence at a glance
 
-In the completed official Sentinel v9 Qwen3.5:9b run, attack success was **0/35**
+In the completed official Sentinel v9 qwen3:8b run, attack success was **0/35**
 and benign completion **9/14**, with no model or defense errors. The strict local
 readiness gate fails on benign utility and normal termination. Only 25 attack
 scenarios had a defense intervention; zero attack success does not mean 35 literal
@@ -32,7 +32,7 @@ local under ignored result/live-run directories.
 ## Run the decision service
 
 Use Python 3.12 and install `requirements.lock.txt` in a virtual environment.
-The optional local-model judge expects Ollama and the declared `qwen3.5:9b` tag.
+The optional local-model judge expects Ollama and the declared `qwen3:8b` tag.
 
 ```powershell
 python -m pip install -r requirements.lock.txt
