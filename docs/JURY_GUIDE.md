@@ -117,16 +117,13 @@ conditional authorized writes. Errors and inconvenient results remain visible.
 
 ## Live dashboard and evidence story
 
-Use the Sentinel kit's Python environment, with Sentinel and Guardyn dependencies:
-
-```powershell
-python tools/live_dashboard.py --kit ../Sentinel_Starter_Kit
-# Open http://127.0.0.1:8090
-```
+The default Docker image runs the dashboard with Python 3.12. See the
+[README quick start](../README.md#run-the-live-sentinel-dashboard) for the
+single supported setup path and the official-kit mount.
 
 The dashboard selects an official scenario and runs a fresh unprotected baseline,
-then a fresh protected run. Select Qwen, mock, or both; there is one active run
-globally. Its overview graph groups enterprise, finance, and SOC stories. Story
+then a fresh protected run. Select Qwen, mock, or both; each dashboard instance
+runs one job at a time. Its overview graph groups enterprise, finance, and SOC stories. Story
 mode follows recorded events; Investigate mode holds a stable source → candidate
 → decision → execution path. Clicking a decision first shows one sentence; deeper
 scrubbed evidence is available on demand. "Waiting for model" ends only when the
@@ -142,12 +139,12 @@ unfinished stream. Protected values are scrubbed before browser delivery.
 
 The live dashboard implementation is in `tools/live_dashboard.py`, `tools/live_child.py`,
 `tools/live_events.py`, and `observability/live.html`. Run artifacts stay local in
-git-ignored `observability/live_runs/`. On 2026-09-22, tests and three fresh mock
-pairs covered the curated stories; **Qwen dashboard pairs had not run** because
-Ollama was unreachable from that environment. Earlier joined traces lack this
-dashboard's event stream, so they cannot be replayed there. Event latency and
-long-trace collapse remain unverified. These are current dashboard limits, not
-changes to the older official v9 scorecards.
+git-ignored `observability/live_runs/`. A fresh local Qwen baseline/protected
+pair on 2026-09-23 completed with the official kit: baseline leaked a restricted
+restore code, while the protected run rewrote the ticket update and reply and
+still passed the legitimate-task grader. These local artifacts are not in the
+branch. Earlier joined traces lack this dashboard's event stream, so they cannot
+be replayed there. Event latency and long-trace collapse remain unverified.
 
 For recorded v9 Qwen execution evidence, load the joined public trace in the
 read-only viewer:
@@ -155,27 +152,6 @@ read-only viewer:
 ```powershell
 python tools/serve_evidence.py --trace observability/results/sentinel-v9-qwen/public/decisions.jsonl --port 8085
 ```
-
-### Six to eight minute jury video
-
-1. **Opening (30 seconds):** state the four decisions and the authority question.
-2. **Enterprise, finance, SOC (about three minutes):** show one safe repair, one
-   blocked unauthorized operation, and one legitimate action allowed despite
-   hostile material. Select actual recorded v9 runs or fresh dashboard runs and
-   inspect their outcomes before narration. A mock-only approval continuation
-   must be labelled mock. Never invent a successful continuation.
-3. **Mechanism (one minute):** follow one action's goal, argument origin, disclosure
-   rule, verdict, replacement if any, and observed execution.
-4. **Evidence and limits (90 seconds):** show sample sizes, model/kit identity,
-   attack success, benign completion, intervention counts, and one utility failure.
-   Explain that published scenarios are known and that jury scores differ from
-   simulator scores.
-5. **Close (30 seconds):** the defense constrains what an agent can do with what it
-   reads, while showing what happened after the decision.
-
-Choose examples by inspecting joined evidence, not by a hardcoded runtime scenario
-rule. Keep protected values out of the recording. Show both useful permitted work
-and the remaining benign-completion gap.
 
 ## Reproduce and package
 
@@ -188,25 +164,15 @@ python tools/eval_sentinel.py --kit ../Sentinel_Starter_Kit --output observabili
 
 Use a new output directory for each experiment. For the limited AgentDojo panel,
 use its separate environment and `tools/eval_agentdojo.py`; pass `--baseline`
-for the matched control. Tests run with `python -m pytest -q`. The last recorded
-Sentinel environment had 87 passing tests with the optional AgentDojo module
-skipped; this is a historical test result, not a fresh check after this cleanup.
+for the matched control. Tests run with `python -m pytest -q`; the current local
+Python 3.12 run passed 102 tests, with one optional integration skipped.
 
-The pinned Python 3.12 Dockerfile starts the live Sentinel dashboard. Mount the
-official kit read-only and keep live evidence in a local Docker volume:
-
-```powershell
-$kit = (Resolve-Path ../Sentinel_Starter_Kit).Path
-docker build -t guardyn-live .
-docker run --rm -p 127.0.0.1:8090:8090 --mount "type=bind,src=$kit,dst=/sentinel-kit,readonly" --mount "type=volume,src=guardyn-live-runs,dst=/var/lib/guardyn/live_runs" -e OLLAMA_HOST=http://host.docker.internal:11434 guardyn-live
-```
-
-This container serves the live graph at localhost:8090 and launches the decision
-API internally for protected runs. Qwen requires a separately reachable Ollama
-server and the declared model tag; mock does not. CI runs offline tests and a
-container smoke check; it does not prove
-live-model benchmark performance. The team has not selected a project software
-license. `sentinel-submission.yaml` declares the team and model.
+The [README](../README.md#run-the-live-sentinel-dashboard) documents the default
+Python 3.12 container. It serves the live graph and launches the decision API
+internally for protected runs. Qwen requires reachable Ollama; mock does not. CI
+runs offline tests and a container smoke check, not a live-model benchmark.
+`sentinel-submission.yaml` declares the team and model. No project software
+license has been selected.
 
 ## Limits and next work
 
@@ -223,5 +189,4 @@ Next engineering priorities are typed, argument-constrained capabilities;
 authenticated provenance and approvals; broader disclosure coverage; repeated
 matched trials; and utility improvements grounded in legitimate task intent.
 Scenario-specific exceptions or grader-phrase matching would break the central
-design rule. The jury rubric weights video 40, report 25, creativity 15, and
-engineering/responsible AI 20; none of the simulator composites is a jury score.
+design rule. Simulator composites are not external judging scores.

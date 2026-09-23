@@ -13,3 +13,6 @@ dist/
 
 # Live dashboard runs hold raw simulator artifacts and logs; they stay local.
 observability/live_runs/
+
+# Local presentation planning is not part of the public source package.
+/docs/VIDEO_PLAN.md

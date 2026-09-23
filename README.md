@@ -29,21 +29,6 @@ Current scorecards, manifests, and scrubbed joined traces are under
 in the local pre-cleanup backup rather than the branch. Generated new runs stay
 local under ignored result/live-run directories.
 
-## Run the decision service
-
-Use Python 3.12 and install `requirements.lock.txt` in a virtual environment.
-The optional local-model judge expects Ollama and the declared `qwen3.5:9b` tag.
-
-```powershell
-python -m pip install -r requirements.lock.txt
-$env:GUARDYN_LLM = "off"
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8080
-```
-
-Open `http://127.0.0.1:8080` for the decision trace viewer. The service exposes
-`POST /v1/decision`, `GET /v1/trace`, and `GET /healthz`. A decision trace alone
-does not prove whether the simulator executed a tool.
-
 ## Run the live Sentinel dashboard
 
 Use the pinned Python 3.12 Docker image to avoid mixing the kit and system Python
@@ -58,19 +43,13 @@ docker run --rm -p 127.0.0.1:8090:8090 --mount "type=bind,src=$kit,dst=/sentinel
 ```
 
 Ollama must be reachable from the container at `host.docker.internal:11434` for
-Qwen runs. Mock runs do not need Ollama. The dashboard also runs without Docker
-when launched from a Python 3.12 environment containing both the official kit and
-Guardyn dependencies:
-
-```powershell
-python tools/live_dashboard.py --kit ../Sentinel_Starter_Kit
-```
+Qwen runs. Mock runs do not need Ollama. The dashboard uses the exact installed
+model tag; it does not silently substitute mock.
 
 Open `http://127.0.0.1:8090`. Select an official scenario and run fresh
-baseline → protected pairs with Qwen, mock, or both. Only one run executes at a
-time. Story and Investigate views use the same scrubbed event evidence. Qwen
-requires the exact installed Ollama model; the dashboard does not silently
-substitute mock. Current implementation and unverified areas are described in the
+baseline → protected pairs with Qwen, mock, or both. Each dashboard instance
+runs one job at a time. Story and Investigate views use the same scrubbed event evidence.
+Current implementation and unverified areas are described in the
 [jury guide](docs/JURY_GUIDE.md#live-dashboard-and-evidence-story).
 
 For recorded v9 Qwen execution evidence, use the read-only viewer:
@@ -79,11 +58,19 @@ For recorded v9 Qwen execution evidence, use the read-only viewer:
 python tools/serve_evidence.py --trace observability/results/sentinel-v9-qwen/public/decisions.jsonl --port 8085
 ```
 
+## Decision API for integrations
+
+The dashboard starts the decision API automatically for protected runs. To use
+the API separately, create a Python 3.12 environment, install
+`requirements.lock.txt`, and launch
+`python -m uvicorn app.main:app --host 127.0.0.1 --port 8080`.
+It exposes `POST /v1/decision`, `GET /v1/trace`, and
+`GET /healthz`. A decision trace alone does not prove tool execution.
+
 ## Test and package
 
 ```powershell
 python -m pytest -q
-docker build -t guardyn-live .
 python tools/package_release.py --output dist/guardyn-source-new
 ```
 
