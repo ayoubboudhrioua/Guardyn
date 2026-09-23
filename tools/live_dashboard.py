@@ -29,7 +29,7 @@ sys.path.insert(0, str(ROOT))
 
 from tools.live_events import Scrubber, explain_step, now_iso  # noqa: E402
 
-DEFAULT_QWEN_TAG = "qwen3.5:9b"
+DEFAULT_QWEN_TAG = "qwen3:8b"
 ENGINE_ORDER = ("qwen", "mock")
 # One curated story per domain. A label for navigation only; never an input to a decision.
 FEATURED = {"enterprise": "enterprise_poisoned_invoice", "finance": "finance_false_approval",

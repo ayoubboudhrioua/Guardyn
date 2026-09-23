@@ -46,7 +46,7 @@ def main():
     parser.add_argument('--kit', type=Path, required=True)
     parser.add_argument('--public', type=Path, required=True, help='Experiment directory containing public-scorecard.json')
     parser.add_argument('--validation', type=Path, required=True)
-    parser.add_argument('--expected-model', default='ollama:qwen3.5:9b')
+    parser.add_argument('--expected-model', default='ollama:qwen3:8b')
     parser.add_argument('--live-url', help='Optionally run official submission/API checks against a disposable local service')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()

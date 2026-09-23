@@ -23,7 +23,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--kit", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--model", default="ollama:qwen3.5:9b")
+    parser.add_argument("--model", default="ollama:qwen3:8b")
     parser.add_argument("--port", type=int, default=8084)
     parser.add_argument("--thinking", action="store_true")
     parser.add_argument("--max-new-tokens", type=int, default=768)

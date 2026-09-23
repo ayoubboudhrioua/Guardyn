@@ -22,7 +22,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--suites", nargs="+", default=["banking", "workspace", "slack", "travel"])
     parser.add_argument("--attacks", nargs="+", default=["ignore_previous", "system_message"])
-    parser.add_argument("--model", default="qwen3.5:9b")
+    parser.add_argument("--model", default="qwen3:8b")
     parser.add_argument("--version", default="v1.2.2")
     parser.add_argument("--limit", type=int, default=0, help="First N user tasks per suite; 0 runs all")
     parser.add_argument("--injection-limit", type=int, default=0)
