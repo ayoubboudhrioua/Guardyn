@@ -29,7 +29,7 @@ Current scorecards, manifests, and scrubbed joined traces are under
 in the local pre-cleanup backup rather than the branch. Generated new runs stay
 local under ignored result/live-run directories.
 
-<<<<<<< HEAD
+ HEAD
 =======
 ## Run the decision service
 
@@ -46,7 +46,6 @@ Open `http://127.0.0.1:8080` for the decision trace viewer. The service exposes
 `POST /v1/decision`, `GET /v1/trace`, and `GET /healthz`. A decision trace alone
 does not prove whether the simulator executed a tool.
 
->>>>>>> d9e8e939dec53439af184850252143b96c16b8ca
 ## Run the live Sentinel dashboard
 
 Use the pinned Python 3.12 Docker image to avoid mixing the kit and system Python
