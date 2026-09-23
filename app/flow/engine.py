@@ -14,7 +14,7 @@ import time
 
 from app import authority, suspicion
 from app.canonical import normalize, closure
-from app.decide import CATEGORY, evaluate as legacy_evaluate, target_of
+from app.decide import CATEGORY, action_digest, evaluate as legacy_evaluate, target_of
 from app.flow import counterfactual, flowpolicy, judge, llm, policy, verify
 from app.flow import ledger as ledger_mod
 from app.flow.flags import SINK_FLAG, Flag, from_legacy, signals as flag_signals
@@ -46,6 +46,24 @@ def _gate_llm(exposes: bool, facts: dict, legacy_risk: float) -> bool:
     return bool(facts["untrusted_texts"]) and (facts["directive_count"] > 0 or legacy_risk >= 0.2)
 
 
+def _steered_read(request: DefenseRequest, action, facts: dict, exposes: bool) -> bool:
+    """A non-exposing tool call whose tool *and* target both come from an untrusted directive.
+
+    directive_support reaches 1.0 only when the directive names the tool and supplies an
+    argument; the argument must also exist nowhere in the goal or trusted context. Values an
+    agent merely found in untrusted data (an IOC in a log, a query hinted at) score lower.
+    """
+    if exposes or action.type != "tool_call":
+        return False
+    if action_digest(action) in request.history_digest.confirmations_granted:
+        return False
+    return (
+        facts["directive_support"] >= 1.0
+        and facts["mandate_support"] < 0.5
+        and bool(facts["untrusted_only_parameters"])
+    )
+
+
 def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
     started = time.perf_counter()
     legacy, trace = legacy_evaluate(request)
@@ -70,6 +88,7 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
     exposes = bool(sink) or bool(consequential)
 
     facts = authority.analyse(request, action)
+    steered = _steered_read(request, action, facts, exposes)
     model_info: dict = {}
     if _gate_llm(exposes, facts, trace["risk"]):
         budget = llm.Budget()
@@ -101,6 +120,7 @@ def evaluate(request: DefenseRequest) -> tuple[DefenseDecision, dict]:
         risk=risk,
         exposes=exposes,
         recheck=recheck,
+        steered=steered,
     )
     verification = recheck(outcome.rewritten) if outcome.rewritten is not None else []
     if verification:

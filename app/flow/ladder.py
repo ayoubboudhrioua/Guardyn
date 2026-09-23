@@ -37,8 +37,10 @@ def choose(
     risk: float,
     exposes: bool,
     recheck,
+    steered: bool = False,
 ) -> Outcome:
     """`exposes` is true when the action writes to a sink or is consequential.
+    `steered` is true when an untrusted directive supplied both the tool and its target.
     `recheck(action)` returns the leftover findings for a rewritten action."""
     notes: list[str] = []
 
@@ -57,6 +59,12 @@ def choose(
     # quoting hostile prose in a payload does not trigger this check.
     if exposes and any(f.code == "UNTRUSTED_INSTRUCTION_SOURCE" and f.severity >= 0.5 for f in flags):
         return Outcome("block", reason="authority", notes=["write follows an untrusted directive outside its mandate"])
+
+    # A read is not harmless when an injection chose it: fetching what the attacker named is
+    # the first half of an exfiltration chain, and sink checks alone would let the secret into
+    # the agent's context. Only fires when the directive supplied the tool and the target.
+    if steered:
+        return Outcome("block", reason="authority", notes=["read follows an untrusted directive that chose its target"])
 
     # 2. Protected data is heading somewhere it may not go.
     if findings:
